@@ -241,6 +241,9 @@ class SubmissionDraftController extends Controller
             return response()->json(['success' => false, 'message' => 'Entered total does not match amounts in uploaded PDFs', 'results' => $check['results']], 422);
         }
         $draft->status = 'pending';
+        if (!$draft->invoice_number) {
+            $draft->invoice_number = $this->generateInvoiceNumber();
+        }
         $draft->save();
 
         if ($draft->producer_in_charge) {
@@ -249,6 +252,18 @@ class SubmissionDraftController extends Controller
             Mail::to($draft->producer_in_charge)->send(new SubmissionNotification($draft, $acceptUrl, $rejectUrl));
         }
         return response()->json(['success' => true, 'id' => $draft->id]);
+    }
+
+    private function generateInvoiceNumber(): string
+    {
+        $prefix = 'VF';
+        do {
+            $seg1 = str_pad((string) random_int(0, 999), 3, '0', STR_PAD_LEFT);
+            $seg2 = str_pad((string) random_int(0, 999), 3, '0', STR_PAD_LEFT);
+            $seg3 = str_pad((string) random_int(0, 99), 2, '0', STR_PAD_LEFT);
+            $code = $prefix.'-'.$seg1.'-'.$seg2.'-'.$seg3;
+        } while (\App\Models\SubmissionDraft::where('invoice_number', $code)->exists());
+        return $code;
     }
 
     private function verifyAmountsAgainstUploaded(SubmissionDraft $draft): array
@@ -316,7 +331,7 @@ class SubmissionDraftController extends Controller
 
         $financeAcceptUrl = URL::temporarySignedRoute('drafts.finance.accept', now()->addDays(7), ['submission' => $submission->id]);
         $financeRejectUrl = URL::temporarySignedRoute('drafts.finance.reject', now()->addDays(7), ['submission' => $submission->id]);
-        Mail::to('finance@producer.com')->send(new SubmissionNotification($submission, $financeAcceptUrl, $financeRejectUrl));
+        Mail::to('finance@vicinity.studio')->send(new SubmissionNotification($submission, $financeAcceptUrl, $financeRejectUrl));
         return response('Submission accepted successfully');
     }
 
@@ -325,10 +340,29 @@ class SubmissionDraftController extends Controller
         if ($submission->status !== 'pending') {
             return response('Invalid submission state', 422);
         }
-        $submission->status = 'rejected';
+        $actionUrl = URL::temporarySignedRoute('drafts.producer.reject.submit', now()->addDays(1), ['submission' => $submission->id]);
+        $html = "<!doctype html><html><head><meta charset='utf-8'><title>Reject Submission</title><meta name='viewport' content='width=device-width, initial-scale=1'><style>body{font-family:Arial, sans-serif;background:#0f172a;color:#e5e7eb;padding:24px} .card{background:#111827;border:1px solid rgba(255,255,255,0.1);border-radius:12px;max-width:640px;margin:0 auto;padding:16px} label{display:block;margin-bottom:8px;color:#e5e7eb;font-weight:bold} textarea{width:100%;min-height:140px;background:#0b1220;color:#e5e7eb;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:12px} button{margin-top:12px;background:#ef4444;color:#0f172a;font-weight:bold;padding:10px 16px;border-radius:8px;border:none;cursor:pointer} .muted{color:#9ca3af;font-size:12px;margin-top:8px}</style></head><body><div class='card'><h2 style='margin:0 0 12px'>Reject Submission</h2><p class='muted'>Please provide a reason for rejection. This will be sent to the submitter.</p><form method='post' action='".
+            htmlspecialchars($actionUrl, ENT_QUOTES, 'UTF-8').
+            "'>".
+            csrf_field().
+            "<label for='reason'>Reason</label><textarea id='reason' name='reason' placeholder='Explain the reason for rejection…' required></textarea><button type='submit'>Submit Rejection</button></form></div></body></html>";
+        return response($html);
+    }
+
+    public function rejectSubmit(Request $request, SubmissionDraft $submission)
+    {
+        if ($submission->status !== 'pending') {
+            return response('Invalid submission state', 422);
+        }
+        $request->validate(['reason' => 'required|string|max:2000']);
         $submission->accepted_by_producer = 'rejected';
+        $submission->status = 'rejected';
+        $submission->producer_rejection_reason = $request->input('reason');
         $submission->save();
-        return response('Submission rejected successfully');
+        try {
+            Mail::to($submission->user_email)->send(new \App\Mail\SubmissionRejectedNotification($submission, 'producer'));
+        } catch (\Throwable $e) {}
+        return response('Submission rejected with reason successfully');
     }
 
     public function financeAccept(Request $request, SubmissionDraft $submission)
@@ -347,10 +381,29 @@ class SubmissionDraftController extends Controller
         if ($submission->status !== 'pending') {
             return response('Invalid submission state', 422);
         }
+        $actionUrl = URL::temporarySignedRoute('drafts.finance.reject.submit', now()->addDays(1), ['submission' => $submission->id]);
+        $html = "<!doctype html><html><head><meta charset='utf-8'><title>Reject Submission</title><meta name='viewport' content='width=device-width, initial-scale=1'><style>body{font-family:Arial, sans-serif;background:#0f172a;color:#e5e7eb;padding:24px} .card{background:#111827;border:1px solid rgba(255,255,255,0.1);border-radius:12px;max-width:640px;margin:0 auto;padding:16px} label{display:block;margin-bottom:8px;color:#e5e7eb;font-weight:bold} textarea{width:100%;min-height:140px;background:#0b1220;color:#e5e7eb;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:12px} button{margin-top:12px;background:#ef4444;color:#0f172a;font-weight:bold;padding:10px 16px;border-radius:8px;border:none;cursor:pointer} .muted{color:#9ca3af;font-size:12px;margin-top:8px}</style></head><body><div class='card'><h2 style='margin:0 0 12px'>Reject Submission</h2><p class='muted'>Please provide a reason for rejection. This will be sent to the submitter.</p><form method='post' action='".
+            htmlspecialchars($actionUrl, ENT_QUOTES, 'UTF-8').
+            "'>".
+            csrf_field().
+            "<label for='reason'>Reason</label><textarea id='reason' name='reason' placeholder='Explain the reason for rejection…' required></textarea><button type='submit'>Submit Rejection</button></form></div></body></html>";
+        return response($html);
+    }
+
+    public function financeRejectSubmit(Request $request, SubmissionDraft $submission)
+    {
+        if ($submission->status !== 'pending') {
+            return response('Invalid submission state', 422);
+        }
+        $request->validate(['reason' => 'required|string|max:2000']);
         $submission->accepted_by_finance = 'rejected';
         $submission->status = 'rejected';
+        $submission->finance_rejection_reason = $request->input('reason');
         $submission->save();
-        return response('Finance rejected successfully');
+        try {
+            Mail::to($submission->user_email)->send(new \App\Mail\SubmissionRejectedNotification($submission, 'finance'));
+        } catch (\Throwable $e) {}
+        return response('Finance rejected with reason successfully');
     }
 
     public function me(Request $request)
@@ -398,6 +451,7 @@ class SubmissionDraftController extends Controller
                 $q->where('user_email', 'like', "%$val%")
                   ->orWhere('document_type', 'like', "%$val%")
                   ->orWhere('status', 'like', "%$val%")
+                  ->orWhere('invoice_number', 'like', "%$val%")
                   ->orWhere('id', 'like', "%$val%");
             });
         }

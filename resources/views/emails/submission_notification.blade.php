@@ -67,6 +67,10 @@
                     </tr>
                     @endif
                     <tr>
+                      <td style="padding:6px 0; color:#9ca3af;">Invoice Number</td>
+                      <td style="padding:6px 0; color:#ffffff;" align="right">{{ $submission->invoice_number }}</td>
+                    </tr>
+                    <tr>
                       <td style="padding:6px 0; color:#9ca3af;">Total Amount</td>
                       <td style="padding:6px 0; color:#ffffff;" align="right">{{ number_format((float)($submission->total_amount ?? 0), 2) }}</td>
                     </tr>

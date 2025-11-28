@@ -99,6 +99,9 @@ Route::get('/producer/drafts/{submission}/accept', [\App\Http\Controllers\Submis
 Route::get('/producer/drafts/{submission}/reject', [\App\Http\Controllers\SubmissionDraftController::class, 'reject'])
     ->name('drafts.producer.reject')
     ->middleware('signed');
+Route::post('/producer/drafts/{submission}/reject', [\App\Http\Controllers\SubmissionDraftController::class, 'rejectSubmit'])
+    ->name('drafts.producer.reject.submit')
+    ->middleware('signed');
 
 Route::get('/drafts/{submission}/files/{index}/download', [\App\Http\Controllers\SubmissionDraftController::class, 'download'])
     ->name('drafts.file.download')
@@ -110,4 +113,7 @@ Route::get('/finance/drafts/{submission}/accept', [\App\Http\Controllers\Submiss
     ->middleware('signed');
 Route::get('/finance/drafts/{submission}/reject', [\App\Http\Controllers\SubmissionDraftController::class, 'financeReject'])
     ->name('drafts.finance.reject')
+    ->middleware('signed');
+Route::post('/finance/drafts/{submission}/reject', [\App\Http\Controllers\SubmissionDraftController::class, 'financeRejectSubmit'])
+    ->name('drafts.finance.reject.submit')
     ->middleware('signed');

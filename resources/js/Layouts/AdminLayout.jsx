@@ -16,10 +16,6 @@ export default function AdminLayout({ children }) {
         <div className="mb-8">
           <div className="flex items-center space-x-3">
             <img src="/logo.webp" alt="Logo" className={`${collapsed ? 'h-10 w-10' : 'h-10 w-auto'} object-contain`} />
-            <div className={`${collapsed ? 'hidden' : 'block'}`}>
-              <h1 className="text-lg font-bold">Vicinity</h1>
-              <p className="text-sm text-vicinity-text/60">Admin Portal</p>
-            </div>
           </div>
         </div>
         <nav className="space-y-2">
