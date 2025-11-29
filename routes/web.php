@@ -117,3 +117,22 @@ Route::get('/finance/drafts/{submission}/reject', [\App\Http\Controllers\Submiss
 Route::post('/finance/drafts/{submission}/reject', [\App\Http\Controllers\SubmissionDraftController::class, 'financeRejectSubmit'])
     ->name('drafts.finance.reject.submit')
     ->middleware('signed');
+
+Route::get('/test-email', function () {
+    $submission = new \App\Models\SubmissionDraft([
+        'user_email' => 'test@vicinity.studio',
+        'producer_in_charge' => 'producer@vicinity.studio',
+        'document_type' => 'invoice',
+        'project_code' => 'QU-5049',
+        'total_amount' => 1234.56,
+        'invoice_number' => 'VF-123-456-78',
+        'amount_rows' => [
+            ['description' => 'Editing', 'amount' => 800],
+            ['description' => 'Sound Design', 'amount' => 434.56],
+        ],
+        'files' => [],
+    ]);
+    \Illuminate\Support\Facades\Mail::to('ar5555789@gmail.com')
+        ->send(new \App\Mail\SubmissionRejectedNotification($submission, 'finance'));
+    return response()->json(['sent' => true]);
+});
