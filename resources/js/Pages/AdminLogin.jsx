@@ -14,8 +14,8 @@ export default function AdminLogin() {
     e.preventDefault()
     setLoading(true)
     setMessage('')
-    let resp = { success: true, message: 'Use code 000000' }
-    try { resp = (await axios.post('/auth/admin/send-code', { email })).data } catch(e){}
+    let resp = { success: false }
+    try { resp = (await axios.post('/auth/admin/send-code', { email })).data } catch(e){ resp = { success:false, message: e?.response?.data?.message || 'Failed to send code' } }
     setLoading(false)
     if (resp.success) { setStep(2); setMessage(resp.message) } else { setMessage(resp.message || 'Failed to send code') }
   }

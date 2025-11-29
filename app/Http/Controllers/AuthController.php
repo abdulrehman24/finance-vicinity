@@ -56,6 +56,12 @@ class AuthController extends Controller
     public function adminSendCode(Request $request)
     {
         $request->validate(['email' => 'required|email']);
+        $user = User::where('email', $request->input('email'))
+            ->where('role', 'admin')
+            ->first();
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Not authorized for admin login'], 422);
+        }
         $code = (string) random_int(100000, 999999);
         $request->session()->put('admin_verification_code', $code);
         $request->session()->put('admin_verification_expires', now()->addMinutes(10));
@@ -67,6 +73,12 @@ class AuthController extends Controller
     public function adminVerify(Request $request)
     {
         $request->validate(['email' => 'required|email', 'code' => 'required']);
+        $user = User::where('email', $request->input('email'))
+            ->where('role', 'admin')
+            ->first();
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Not authorized for admin login'], 422);
+        }
         $code = $request->session()->get('admin_verification_code');
         $expires = $request->session()->get('admin_verification_expires');
         if (!$code || ($expires && now()->gt($expires))) {
@@ -77,11 +89,6 @@ class AuthController extends Controller
             $request->session()->forget('admin_verification_expires');
             $request->session()->put('admin_verified', true);
             $request->session()->put('admin_email', $request->input('email'));
-            $user = User::firstOrCreate(['email' => $request->input('email')], [
-                'name' => explode('@', $request->input('email'))[0],
-                'role' => 'admin',
-                'password' => ''
-            ]);
             $request->session()->put('role', $user->role);
             return response()->json(['success' => true]);
         }
