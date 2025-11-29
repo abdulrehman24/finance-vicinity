@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Storage;
 
 class Setting extends Model
 {
-    protected $fillable = ['finance_email', 'logo_path'];
+    protected $fillable = ['finance_email', 'logo_path', 'site_title', 'favicon_path'];
 
     public static function current(): self
     {
@@ -16,6 +16,8 @@ class Setting extends Model
             $setting = new self([
                 'finance_email' => 'finance@vicinity.studio',
                 'logo_path' => 'logo.webp',
+                'site_title' => 'Vicinity Finance Portal',
+                'favicon_path' => null,
             ]);
             $setting->save();
         }
@@ -36,5 +38,19 @@ class Setting extends Model
         }
         return asset('logo.webp');
     }
-}
 
+    public function faviconUrl(): string
+    {
+        $path = (string) ($this->favicon_path ?? '');
+        if ($path === '' || preg_match('/^https?:\/\//i', $path)) {
+            return $path !== '' ? $path : asset('favicon.ico');
+        }
+        if (str_starts_with($path, 'storage/')) {
+            return url($path);
+        }
+        if (Storage::disk('public')->exists($path)) {
+            return url(Storage::url($path));
+        }
+        return asset('favicon.ico');
+    }
+}

@@ -46,6 +46,9 @@ class HandleInertiaRequests extends Middleware
                 'finance_email' => $settings->finance_email,
                 'logoUrl' => $settings->logoUrl(),
                 'logo_url' => $settings->logoUrl(),
+                'site_title' => $settings->site_title,
+                'faviconUrl' => $settings->faviconUrl(),
+                'favicon_url' => $settings->faviconUrl(),
             ],
         ];
     }
