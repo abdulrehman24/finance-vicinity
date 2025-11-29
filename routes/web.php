@@ -133,6 +133,6 @@ Route::get('/test-email', function () {
         'files' => [],
     ]);
     \Illuminate\Support\Facades\Mail::to('ar5555789@gmail.com')
-        ->send(new \App\Mail\SubmissionRejectedNotification($submission, 'finance'));
+        ->queue(new \App\Mail\SubmissionRejectedNotification($submission, 'finance'));
     return response()->json(['sent' => true]);
 });

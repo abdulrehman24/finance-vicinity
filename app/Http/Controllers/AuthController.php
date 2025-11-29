@@ -16,7 +16,7 @@ class AuthController extends Controller
         $request->session()->put('verification_code', $code);
         $request->session()->put('verification_expires', now()->addMinutes(10));
         $request->session()->put('verification_email', $request->input('email'));
-        Mail::to($request->input('email'))->send(new OtpMail($code));
+        Mail::to($request->input('email'))->queue(new OtpMail($code));
         return response()->json(['success' => true, 'message' => 'OTP sent to your email']);
     }
 
@@ -60,7 +60,7 @@ class AuthController extends Controller
         $request->session()->put('admin_verification_code', $code);
         $request->session()->put('admin_verification_expires', now()->addMinutes(10));
         $request->session()->put('admin_verification_email', $request->input('email'));
-        Mail::to($request->input('email'))->send(new OtpMail($code));
+        Mail::to($request->input('email'))->queue(new OtpMail($code));
         return response()->json(['success' => true, 'message' => 'OTP sent to your email']);
     }
 

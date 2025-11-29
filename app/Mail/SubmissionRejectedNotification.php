@@ -5,9 +5,10 @@ namespace App\Mail;
 use App\Models\SubmissionDraft;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\SerializesModels;
 
-class SubmissionRejectedNotification extends Mailable
+class SubmissionRejectedNotification extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
@@ -31,4 +32,3 @@ class SubmissionRejectedNotification extends Mailable
             ]);
     }
 }
-

@@ -249,7 +249,7 @@ class SubmissionDraftController extends Controller
         if ($draft->producer_in_charge) {
             $acceptUrl = URL::temporarySignedRoute('drafts.producer.accept', now()->addDays(7), ['submission' => $draft->id]);
             $rejectUrl = URL::temporarySignedRoute('drafts.producer.reject', now()->addDays(7), ['submission' => $draft->id]);
-            Mail::to($draft->producer_in_charge)->send(new SubmissionNotification($draft, $acceptUrl, $rejectUrl));
+            Mail::to($draft->producer_in_charge)->queue(new SubmissionNotification($draft, $acceptUrl, $rejectUrl));
         }
         return response()->json(['success' => true, 'id' => $draft->id]);
     }
@@ -331,7 +331,7 @@ class SubmissionDraftController extends Controller
 
         $financeAcceptUrl = URL::temporarySignedRoute('drafts.finance.accept', now()->addDays(7), ['submission' => $submission->id]);
         $financeRejectUrl = URL::temporarySignedRoute('drafts.finance.reject', now()->addDays(7), ['submission' => $submission->id]);
-        Mail::to('finance@vicinity.studio')->send(new SubmissionNotification($submission, $financeAcceptUrl, $financeRejectUrl));
+        Mail::to('finance@vicinity.studio')->queue(new SubmissionNotification($submission, $financeAcceptUrl, $financeRejectUrl));
         return response('Submission accepted successfully');
     }
 
@@ -360,7 +360,7 @@ class SubmissionDraftController extends Controller
         $submission->producer_rejection_reason = $request->input('reason');
         $submission->save();
         try {
-            Mail::to($submission->user_email)->send(new \App\Mail\SubmissionRejectedNotification($submission, 'producer'));
+            Mail::to($submission->user_email)->queue(new \App\Mail\SubmissionRejectedNotification($submission, 'producer'));
         } catch (\Throwable $e) {}
         return response('Submission rejected with reason successfully');
     }
@@ -401,7 +401,7 @@ class SubmissionDraftController extends Controller
         $submission->finance_rejection_reason = $request->input('reason');
         $submission->save();
         try {
-            Mail::to($submission->user_email)->send(new \App\Mail\SubmissionRejectedNotification($submission, 'finance'));
+            Mail::to($submission->user_email)->queue(new \App\Mail\SubmissionRejectedNotification($submission, 'finance'));
         } catch (\Throwable $e) {}
         return response('Finance rejected with reason successfully');
     }
