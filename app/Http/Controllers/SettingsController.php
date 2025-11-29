@@ -16,6 +16,7 @@ class SettingsController extends Controller
             'settings' => [
                 'finance_email' => $setting->finance_email,
                 'logo_url' => $setting->logoUrl(),
+                'logoUrl' => $setting->logoUrl(),
             ],
         ]);
     }
@@ -52,4 +53,3 @@ class SettingsController extends Controller
         ]);
     }
 }
-

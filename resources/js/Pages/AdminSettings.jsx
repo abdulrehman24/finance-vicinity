@@ -1,8 +1,10 @@
 import React from 'react'
 import AdminLayout from '../Layouts/AdminLayout'
+import { usePage } from '@inertiajs/react'
 import axios from 'axios'
 
 export default function AdminSettings() {
+  const { props } = usePage()
   const [financeEmail, setFinanceEmail] = React.useState('')
   const [logoPreview, setLogoPreview] = React.useState('')
   const [logoFile, setLogoFile] = React.useState(null)
@@ -10,13 +12,10 @@ export default function AdminSettings() {
   const [loading, setLoading] = React.useState(false)
 
   React.useEffect(()=>{
-    try {
-      const p = window.Inertia?.page?.props
-      const s = p?.settings || p?.settings
-      setFinanceEmail(s?.finance_email || '')
-      setLogoPreview(s?.logo_url || p?.settings?.logoUrl || '/logo.webp')
-    } catch(e) {}
-  }, [])
+    const s = props?.settings || {}
+    setFinanceEmail(s.finance_email || '')
+    setLogoPreview(s.logo_url || s.logoUrl || '/logo.webp')
+  }, [props])
 
   function handleLogoChange(e){
     const file = e.target.files && e.target.files[0]

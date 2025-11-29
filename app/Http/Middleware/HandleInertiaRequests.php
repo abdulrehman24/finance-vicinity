@@ -45,6 +45,7 @@ class HandleInertiaRequests extends Middleware
             'settings' => [
                 'finance_email' => $settings->finance_email,
                 'logoUrl' => $settings->logoUrl(),
+                'logo_url' => $settings->logoUrl(),
             ],
         ];
     }
