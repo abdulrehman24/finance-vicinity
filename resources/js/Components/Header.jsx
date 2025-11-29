@@ -13,7 +13,7 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-3">
-            <img src="/logo.webp" alt="Logo" className="h-8 w-auto object-contain" />
+            <img src={props?.settings?.logoUrl || '/logo.webp'} alt="Logo" className="h-8 w-auto object-contain" />
             <div>
               <h1 className="text-xl font-bold text-vicinity-text">Vicinity</h1>
               <p className="text-sm text-vicinity-text/60">Finance Portal</p>

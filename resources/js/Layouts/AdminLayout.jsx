@@ -1,10 +1,11 @@
 import React from 'react'
-import { Link, router } from '@inertiajs/react'
+import { Link, router, usePage } from '@inertiajs/react'
 import axios from 'axios'
 import { FiHome, FiList, FiLogOut, FiChevronLeft, FiChevronRight } from 'react-icons/fi'
 
 export default function AdminLayout({ children }) {
   const path = typeof window !== 'undefined' ? window.location.pathname : ''
+  const { props } = usePage()
   const [collapsed, setCollapsed] = React.useState(true)
   React.useEffect(()=>{
     try { if (window.innerWidth >= 768) setCollapsed(false) } catch(e){}
@@ -15,7 +16,7 @@ export default function AdminLayout({ children }) {
       <aside className={`${collapsed ? 'w-20' : 'w-64'} bg-vicinity-card border-r border-vicinity-text/10 ${collapsed ? 'p-3' : 'p-6'} transition-all duration-200`}> 
         <div className="mb-8">
           <div className="flex items-center space-x-3">
-            <img src="/logo.webp" alt="Logo" className={`${collapsed ? 'h-10 w-10' : 'h-10 w-auto'} object-contain`} />
+            <img src={props?.settings?.logoUrl || '/logo.webp'} alt="Logo" className={`${collapsed ? 'h-10 w-10' : 'h-10 w-auto'} object-contain`} />
           </div>
         </div>
         <nav className="space-y-2">
@@ -35,6 +36,12 @@ export default function AdminLayout({ children }) {
             <span className="inline-flex items-center space-x-2">
               <FiList />
               <span className={`${collapsed ? 'hidden' : 'block'}`}>Producers</span>
+            </span>
+          </Link>
+          <Link href="/admin/settings" className={linkCls('/admin/settings')}>
+            <span className="inline-flex items-center space-x-2">
+              <FiList />
+              <span className={`${collapsed ? 'hidden' : 'block'}`}>Settings</span>
             </span>
           </Link>
         </nav>

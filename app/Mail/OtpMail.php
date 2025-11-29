@@ -15,8 +15,9 @@ class OtpMail extends Mailable implements ShouldQueue
 
     public function build()
     {
+        $settings = \App\Models\Setting::current();
         return $this->subject('Your Vicinity Finance Portal OTP')
             ->view('emails.otp')
-            ->with(['code' => $this->code]);
+            ->with(['code' => $this->code, 'logoUrl' => $settings->logoUrl()]);
     }
 }

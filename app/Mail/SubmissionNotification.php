@@ -26,12 +26,14 @@ class SubmissionNotification extends Mailable implements ShouldQueue
 
     public function build()
     {
+        $settings = \App\Models\Setting::current();
         $mail = $this->subject('New Submission Pending Your Approval')
             ->view('emails.submission_notification')
             ->with([
                 'submission' => $this->submission,
                 'acceptUrl' => $this->acceptUrl,
                 'rejectUrl' => $this->rejectUrl,
+                'logoUrl' => $settings->logoUrl(),
             ]);
         $path = (string) ($this->submission->combined_invoice_pdf ?? '');
         if ($path && Storage::disk('public')->exists($path)) {

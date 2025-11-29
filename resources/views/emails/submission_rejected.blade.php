@@ -22,7 +22,7 @@
                 <table role="presentation" width="100%">
                   <tr>
                     <td style="width:48px;">
-                      <img src="{{ asset('logo.webp') }}" style="height:24px; width:auto; display:block;" alt="Logo" />
+                      <img src="{{ $logoUrl ?? asset('logo.webp') }}" style="height:24px; width:auto; display:block;" alt="Logo" />
                     </td>
                     <td>
                       <div style="color:#0f172a;">

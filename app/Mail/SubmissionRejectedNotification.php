@@ -23,12 +23,14 @@ class SubmissionRejectedNotification extends Mailable implements ShouldQueue
 
     public function build()
     {
+        $settings = \App\Models\Setting::current();
         return $this->subject('Your Submission Was Rejected')
             ->view('emails.submission_rejected')
             ->with([
                 'submission' => $this->submission,
                 'role' => $this->role,
                 'reason' => $this->role === 'finance' ? ($this->submission->finance_rejection_reason ?? '') : ($this->submission->producer_rejection_reason ?? ''),
+                'logoUrl' => $settings->logoUrl(),
             ]);
     }
 }

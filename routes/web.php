@@ -73,6 +73,8 @@ Route::middleware(['admin'])->group(function () {
     Route::post('/admin/producers', [\App\Http\Controllers\ProducerController::class, 'store']);
     Route::put('/admin/producers/{producer}', [\App\Http\Controllers\ProducerController::class, 'update']);
     Route::delete('/admin/producers/{producer}', [\App\Http\Controllers\ProducerController::class, 'destroy']);
+    Route::get('/admin/settings', [\App\Http\Controllers\SettingsController::class, 'show']);
+    Route::post('/admin/settings', [\App\Http\Controllers\SettingsController::class, 'update']);
 });
 
 Route::post('/auth/send-code', [\App\Http\Controllers\AuthController::class, 'sendCode']);

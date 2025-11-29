@@ -400,7 +400,9 @@ class SubmissionDraftController extends Controller
 
         $financeAcceptUrl = URL::temporarySignedRoute('drafts.finance.accept', now()->addDays(7), ['submission' => $submission->id]);
         $financeRejectUrl = URL::temporarySignedRoute('drafts.finance.reject', now()->addDays(7), ['submission' => $submission->id]);
-        Mail::to('finance@vicinity.studio')->queue(new SubmissionNotification($submission, $financeAcceptUrl, $financeRejectUrl));
+        $settings = \App\Models\Setting::current();
+        $to = $settings->finance_email ?: 'finance@vicinity.studio';
+        Mail::to($to)->queue(new SubmissionNotification($submission, $financeAcceptUrl, $financeRejectUrl));
         return response('Submission accepted successfully');
     }
 

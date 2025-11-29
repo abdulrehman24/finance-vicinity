@@ -35,11 +35,16 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $settings = \App\Models\Setting::current();
         return [
             ...parent::share($request),
             'auth' => [
                 'email' => $request->session()->get('user_email'),
                 'verified' => (bool) $request->session()->get('verified'),
+            ],
+            'settings' => [
+                'finance_email' => $settings->finance_email,
+                'logoUrl' => $settings->logoUrl(),
             ],
         ];
     }
