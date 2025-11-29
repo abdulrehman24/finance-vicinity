@@ -11,6 +11,8 @@
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
         "opcodesio/log-viewer": "^3.21",
+        "setasign/fpdf": "^1.8",
+        "setasign/fpdi": "^2.6",
         "smalot/pdfparser": "^2.12",
         "spatie/pdf-to-text": "^1.54",
         "yajra/laravel-datatables-oracle": "12"

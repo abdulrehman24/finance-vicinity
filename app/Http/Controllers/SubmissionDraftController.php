@@ -71,6 +71,19 @@ class SubmissionDraftController extends Controller
         if ($request->hasFile('files')) {
             $request->validate(['files.*' => 'file|mimes:pdf,png,jpg,jpeg,gif,webp|max:10240']);
             $assigned = (array) $request->input('assignedTypes', []);
+            if ($draft->status === 'draft') {
+                $existing = is_array($draft->files) ? $draft->files : [];
+                foreach ($existing as $ex) {
+                    $p = $ex['path'] ?? null;
+                    if ($p) { \Illuminate\Support\Facades\Storage::disk('public')->delete($p); }
+                }
+                $dir = 'submissions/'.$draft->id;
+                \Illuminate\Support\Facades\Storage::disk('public')->deleteDirectory($dir);
+                $combined = (string) ($draft->combined_invoice_pdf ?? '');
+                if ($combined) { \Illuminate\Support\Facades\Storage::disk('public')->delete($combined); }
+                $draft->combined_invoice_pdf = null;
+                $draft->files = [];
+            }
             foreach ($request->file('files') as $idx => $file) {
                 $path = $file->store('submissions/'.$draft->id, 'public');
                 $stored[] = [
@@ -86,24 +99,7 @@ class SubmissionDraftController extends Controller
 
         $metaOnly = (array) $request->input('files', []);
         if ($stored) {
-            $existing = is_array($draft->files) ? $draft->files : [];
-            $merged = array_values(array_merge($existing, $stored));
-            $dedup = [];
-            $seen = [];
-            foreach ($merged as $ex) {
-                $key = (($ex['name'] ?? '')).'|'.(string)($ex['size'] ?? '');
-                if (isset($seen[$key])) {
-                    $idx = $seen[$key];
-                    $prev = $dedup[$idx];
-                    $keepCurrent = isset($ex['path']) && $ex['path'];
-                    $keepPrev = isset($prev['path']) && $prev['path'];
-                    if ($keepCurrent && !$keepPrev) { $dedup[$idx] = $ex; }
-                } else {
-                    $seen[$key] = count($dedup);
-                    $dedup[] = $ex;
-                }
-            }
-            $draft->files = array_values($dedup);
+            $draft->files = array_values($stored);
         } elseif ($request->has('files')) {
             $existing = is_array($draft->files) ? $draft->files : [];
             $present = [];
@@ -245,6 +241,13 @@ class SubmissionDraftController extends Controller
             $draft->invoice_number = $this->generateInvoiceNumber();
         }
         $draft->save();
+        try {
+            $combined = $this->generateCombinedInvoicePdf($draft);
+            if ($combined) {
+                $draft->combined_invoice_pdf = $combined;
+                $draft->save();
+            }
+        } catch (\Throwable $e) {}
 
         if ($draft->producer_in_charge) {
             $acceptUrl = URL::temporarySignedRoute('drafts.producer.accept', now()->addDays(7), ['submission' => $draft->id]);
@@ -264,6 +267,72 @@ class SubmissionDraftController extends Controller
             $code = $prefix.'-'.$seg1.'-'.$seg2.'-'.$seg3;
         } while (\App\Models\SubmissionDraft::where('invoice_number', $code)->exists());
         return $code;
+    }
+
+    private function generateCombinedInvoicePdf(SubmissionDraft $draft): ?string
+    {
+        $files = is_array($draft->files) ? $draft->files : [];
+        $invoiceFiles = [];
+        $invoicePdfFiles = [];
+        foreach ($files as $f) {
+            $path = $f['path'] ?? null;
+            if (!$path) { continue; }
+            $type = (string) ($f['type'] ?? '');
+            $name = (string) ($f['name'] ?? '');
+            
+            $full = Storage::disk('public')->path($path);
+            if (!is_file($full)) { continue; }
+            $invoiceFiles[] = $full;
+            $isPdf = stripos($type, 'pdf') !== false || preg_match('/\\.pdf$/i', $path) || preg_match('/\\.pdf$/i', $name);
+            if ($isPdf) { $invoicePdfFiles[] = $full; }
+        }
+        if (count($invoiceFiles) === 0) { return null; }
+        $dir = 'submissions/'.$draft->id;
+        Storage::disk('public')->makeDirectory($dir);
+        $targetRel = $dir.'/combined-invoices.pdf';
+        $target = Storage::disk('public')->path($targetRel);
+        try {
+            if (class_exists('\\setasign\\Fpdi\\Fpdi') && count($invoicePdfFiles) > 0) {
+                \Log::info('Combining PDFs via FPDI', ['submission_id' => $draft->id, 'count' => count($invoicePdfFiles)]);
+                $class = '\\setasign\\Fpdi\\Fpdi';
+                $pdf = new $class();
+                foreach ($invoicePdfFiles as $file) {
+                    $pageCount = $pdf->setSourceFile($file);
+                    for ($pageNo = 1; $pageNo <= $pageCount; $pageNo++) {
+                        $template = $pdf->importPage($pageNo);
+                        $size = $pdf->getTemplateSize($template);
+                        $orientation = ($size['width'] ?? 0) > ($size['height'] ?? 0) ? 'L' : 'P';
+                        $pdf->AddPage($orientation, [$size['width'], $size['height']]);
+                        $pdf->useTemplate($template);
+                    }
+                }
+                $pdf->Output($target, 'F');
+                return $targetRel;
+            } elseif (class_exists('\\Imagick')) {
+                \Log::info('Combining documents via Imagick', ['submission_id' => $draft->id, 'count' => count($invoiceFiles)]);
+                $imagickClass = '\\Imagick';
+                $imagick = new $imagickClass();
+                $imagick->setResolution(150, 150);
+                foreach ($invoiceFiles as $file) {
+                    $doc = new $imagickClass();
+                    $doc->readImage($file);
+                    foreach ($doc as $page) { $imagick->addImage($page); }
+                }
+                $imagick->setImageFormat('pdf');
+                $imagick->writeImages($target, true);
+                return $targetRel;
+            }
+        } catch (\Throwable $e) {
+            // swallow and return null
+        }
+        if (count($invoicePdfFiles) >= 1) {
+            try {
+                \Log::info('Combined fallback copy first PDF', ['submission_id' => $draft->id, 'path' => $invoicePdfFiles[0]]);
+                @copy($invoicePdfFiles[0], $target);
+                if (is_file($target)) { return $targetRel; }
+            } catch (\Throwable $e) {}
+        }
+        return null;
     }
 
     private function verifyAmountsAgainstUploaded(SubmissionDraft $draft): array

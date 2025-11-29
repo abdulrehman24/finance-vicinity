@@ -70,6 +70,16 @@
                       <td style="padding:6px 0; color:#9ca3af;">Total Amount</td>
                       <td style="padding:6px 0; color:#ffffff;" align="right">{{ number_format((float)($submission->total_amount ?? 0), 2) }}</td>
                     </tr>
+                    <tr>
+                      <td style="padding:6px 0; color:#9ca3af;">Download Submitted PDF</td>
+                      <td style="padding:6px 0; color:#ffffff;" align="right">
+                        @if(!empty($submission->combined_invoice_pdf))
+                          <a href="{{ url(\Illuminate\Support\Facades\Storage::url($submission->combined_invoice_pdf)) }}" style="color:#a7f3d0; text-decoration:none;" target="_blank">Download PDF</a>
+                        @else
+                          -
+                        @endif
+                      </td>
+                    </tr>
                   </table>
                 </div>
               </td>

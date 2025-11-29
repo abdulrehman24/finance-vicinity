@@ -7,6 +7,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Storage;
 
 class SubmissionNotification extends Mailable implements ShouldQueue
 {
@@ -25,12 +26,20 @@ class SubmissionNotification extends Mailable implements ShouldQueue
 
     public function build()
     {
-        return $this->subject('New Submission Pending Your Approval')
+        $mail = $this->subject('New Submission Pending Your Approval')
             ->view('emails.submission_notification')
             ->with([
                 'submission' => $this->submission,
                 'acceptUrl' => $this->acceptUrl,
                 'rejectUrl' => $this->rejectUrl,
             ]);
+        $path = (string) ($this->submission->combined_invoice_pdf ?? '');
+        if ($path && Storage::disk('public')->exists($path)) {
+            $mail->attach(Storage::disk('public')->path($path), [
+                'as' => 'combined-invoices.pdf',
+                'mime' => 'application/pdf'
+            ]);
+        }
+        return $mail;
     }
 }

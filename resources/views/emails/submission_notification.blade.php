@@ -78,6 +78,16 @@
                       <td style="padding:6px 0; color:#9ca3af;">Submitted By</td>
                       <td style="padding:6px 0; color:#ffffff;" align="right">{{ $submission->user_email }}</td>
                     </tr>
+                    <tr>
+                      <td style="padding:6px 0; color:#9ca3af;">Download Submitted PDF</td>
+                      <td style="padding:6px 0; color:#ffffff;" align="right">
+                        @if(!empty($submission->combined_invoice_pdf))
+                          <a href="{{ url(\Illuminate\Support\Facades\Storage::url($submission->combined_invoice_pdf)) }}" style="color:#a7f3d0; text-decoration:none;" target="_blank">Download PDF</a>
+                        @else
+                          -
+                        @endif
+                      </td>
+                    </tr>
                   </table>
                 </div>
 
@@ -107,28 +117,7 @@
                 </div>
                 @endif
 
-                @if(is_array($submission->files) && count($submission->files))
-                <div class="card" style="margin-top:16px; background:#0b1220; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:16px;">
-                  <p style="margin:0 0 8px; font-weight:bold; color:#ffffff;">Attached Documents</p>
-                  <ul style="margin:0; padding-left:18px; color:#9ca3af;">
-                    @foreach($submission->files as $idx => $f)
-                      <li>
-                        <span style="color:#e5e7eb;">{{ $f['name'] ?? 'Document' }}</span>
-                        @if(!empty($f['assignedType']))
-                          <span style="color:#9ca3af;"> — {{ $f['assignedType'] }}</span>
-                        @endif
-                        @if(!empty($f['url']))
-                          <a href="{{ $f['url'] }}" style="color:#a7f3d0; text-decoration:none; margin-left:8px;" target="_blank">View</a>
-                          <a href="{{ \Illuminate\Support\Facades\URL::temporarySignedRoute('drafts.file.download', now()->addDays(7), ['submission' => $submission->id, 'index' => $idx]) }}" style="color:#a7f3d0; text-decoration:none; margin-left:8px; display:inline-block; background:#0b1220; border:1px solid rgba(255,255,255,0.12); padding:2px 8px; border-radius:6px;">
-                            <span style="font-weight:bold; color:#a7f3d0;">⬇︎</span>
-                            <span style="margin-left:4px; color:#a7f3d0;">Download</span>
-                          </a>
-                        @endif
-                      </li>
-                    @endforeach
-                  </ul>
-                </div>
-                @endif
+                
 
                 <div style="text-align:center; margin-top:24px;">
                   <a href="{{ $acceptUrl }}" class="btn" style="display:inline-block; background:#10b981; color:#0f172a; font-weight:bold; padding:12px 20px; border-radius:8px; text-decoration:none; margin-right:12px;">Accept Submission</a>
