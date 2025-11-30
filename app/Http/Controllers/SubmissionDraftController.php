@@ -136,12 +136,16 @@ class SubmissionDraftController extends Controller
         $expected = (float) ($draft->total_amount ?? 0);
         $expectedAmounts = [];
         $rows = is_array($draft->amount_rows) ? $draft->amount_rows : [];
+        $billTo = (string) ($draft->bill_to ?? '');
+        $billToNorm = $this->normalizeText($billTo);
         foreach ($rows as $r) {
             $amt = isset($r['amount']) ? (float) str_replace(',', '', $r['amount']) : null;
             if ($amt && $amt > 0) { $expectedAmounts[] = $amt; }
         }
         $results = [];
         $allCandidates = [];
+        $invoicePdfCount = 0;
+        $billToMatches = 0;
         foreach ($files as $idx => $file) {
             $path = $file['path'] ?? null;
             if (!$path) { continue; }
@@ -154,6 +158,8 @@ class SubmissionDraftController extends Controller
             try { $text = Pdf::getText($full); } catch (\Throwable $e) {
                 try { $parser = new Parser(); $pdf = $parser->parseFile($full); $text = (string) $pdf->getText(); } catch (\Throwable $e2) { $text = ''; }
             }
+            $invoicePdfCount++;
+            $textNorm = $this->normalizeText($text);
             $candidates = $this->extractAmountsFromText($text);
             $matched = false; $matchValue = null;
             if ($expectedAmounts) {
@@ -161,6 +167,8 @@ class SubmissionDraftController extends Controller
             } else {
                 foreach ($candidates as $val) { if (abs($val - $expected) < 0.01) { $matched = true; $matchValue = $val; break; } }
             }
+            $billToMatched = false;
+            if ($billToNorm !== '') { $billToMatched = $this->containsNormalized($textNorm, $billToNorm); if ($billToMatched) { $billToMatches++; } }
             $results[] = [
                 'index' => $idx,
                 'name' => $file['name'] ?? basename($full),
@@ -168,6 +176,7 @@ class SubmissionDraftController extends Controller
                 'foundAmounts' => array_values($candidates),
                 'matched' => $matched,
                 'matchValue' => $matchValue,
+                'billToMatched' => $billToMatched,
             ];
             foreach ($candidates as $val) { $allCandidates[] = $val; }
         }
@@ -183,6 +192,9 @@ class SubmissionDraftController extends Controller
         } else {
             $verified = $expected > 0 && collect($allCandidates)->contains(function($val) use ($expected){ return abs($val - $expected) < 0.01; });
         }
+        $billToVerified = true;
+        if ($billToNorm !== '' && $invoicePdfCount > 0) { $billToVerified = ($billToMatches === $invoicePdfCount); }
+        $verified = $verified && $billToVerified;
         $draft->current_step = 3;
         $draft->save();
         return response()->json([
@@ -193,6 +205,8 @@ class SubmissionDraftController extends Controller
             'matchedAmounts' => $matchedAmounts,
             'results' => $results,
             'verified' => $verified,
+            'billToVerified' => $billToVerified,
+            'billTo' => $billTo,
         ]);
     }
 
@@ -234,7 +248,9 @@ class SubmissionDraftController extends Controller
         $draft->current_step = 4;
         $check = $this->verifyAmountsAgainstUploaded($draft);
         if (!$check['verified']) {
-            return response()->json(['success' => false, 'message' => 'Entered total does not match amounts in uploaded PDFs', 'results' => $check['results']], 422);
+            $msg = 'Entered total does not match amounts in uploaded PDFs';
+            if (isset($check['billToVerified']) && !$check['billToVerified']) { $msg = 'Bill To company does not match in uploaded invoices'; }
+            return response()->json(['success' => false, 'message' => $msg, 'results' => $check['results']], 422);
         }
         $draft->status = 'pending';
         if (!$draft->invoice_number) {
@@ -293,7 +309,6 @@ class SubmissionDraftController extends Controller
         $target = Storage::disk('public')->path($targetRel);
         try {
             if (class_exists('\\setasign\\Fpdi\\Fpdi') && count($invoicePdfFiles) > 0) {
-                \Log::info('Combining PDFs via FPDI', ['submission_id' => $draft->id, 'count' => count($invoicePdfFiles)]);
                 $class = '\\setasign\\Fpdi\\Fpdi';
                 $pdf = new $class();
                 foreach ($invoicePdfFiles as $file) {
@@ -309,7 +324,6 @@ class SubmissionDraftController extends Controller
                 $pdf->Output($target, 'F');
                 return $targetRel;
             } elseif (class_exists('\\Imagick')) {
-                \Log::info('Combining documents via Imagick', ['submission_id' => $draft->id, 'count' => count($invoiceFiles)]);
                 $imagickClass = '\\Imagick';
                 $imagick = new $imagickClass();
                 $imagick->setResolution(150, 150);
@@ -327,12 +341,25 @@ class SubmissionDraftController extends Controller
         }
         if (count($invoicePdfFiles) >= 1) {
             try {
-                \Log::info('Combined fallback copy first PDF', ['submission_id' => $draft->id, 'path' => $invoicePdfFiles[0]]);
                 @copy($invoicePdfFiles[0], $target);
                 if (is_file($target)) { return $targetRel; }
             } catch (\Throwable $e) {}
         }
         return null;
+    }
+
+    private function normalizeText(string $s): string
+    {
+        $s = strtolower($s);
+        $s = preg_replace('/[^a-z0-9]+/i', ' ', $s);
+        $s = preg_replace('/\s+/', ' ', $s);
+        return trim((string)$s);
+    }
+
+    private function containsNormalized(string $haystackNorm, string $needleNorm): bool
+    {
+        if ($needleNorm === '') { return true; }
+        return strpos($haystackNorm, $needleNorm) !== false;
     }
 
     private function verifyAmountsAgainstUploaded(SubmissionDraft $draft): array
@@ -341,12 +368,16 @@ class SubmissionDraftController extends Controller
         $expected = (float) ($draft->total_amount ?? 0);
         $expectedAmounts = [];
         $rows = is_array($draft->amount_rows) ? $draft->amount_rows : [];
+        $billTo = (string) ($draft->bill_to ?? '');
+        $billToNorm = $this->normalizeText($billTo);
         foreach ($rows as $r) {
             $amt = isset($r['amount']) ? (float) str_replace(',', '', $r['amount']) : null;
             if ($amt && $amt > 0) { $expectedAmounts[] = $amt; }
         }
         $results = [];
         $allCandidates = [];
+        $invoicePdfCount = 0;
+        $billToMatches = 0;
         foreach ($files as $idx => $file) {
             $path = $file['path'] ?? null;
             if (!$path) { continue; }
@@ -359,6 +390,8 @@ class SubmissionDraftController extends Controller
             try { $text = \Spatie\PdfToText\Pdf::getText($full); } catch (\Throwable $e) {
                 try { $parser = new \Smalot\PdfParser\Parser(); $pdf = $parser->parseFile($full); $text = (string) $pdf->getText(); } catch (\Throwable $e2) { $text = ''; }
             }
+            $invoicePdfCount++;
+            $textNorm = $this->normalizeText($text);
             $candidates = $this->extractAmountsFromText($text);
             $matched = false; $matchValue = null;
             if ($expectedAmounts) {
@@ -366,6 +399,8 @@ class SubmissionDraftController extends Controller
             } else {
                 foreach ($candidates as $val) { if (abs($val - $expected) < 0.01) { $matched = true; $matchValue = $val; break; } }
             }
+            $billToMatched = false;
+            if ($billToNorm !== '') { $billToMatched = $this->containsNormalized($textNorm, $billToNorm); if ($billToMatched) { $billToMatches++; } }
             $results[] = [
                 'index' => $idx,
                 'name' => $file['name'] ?? basename($full),
@@ -373,6 +408,7 @@ class SubmissionDraftController extends Controller
                 'foundAmounts' => array_values($candidates),
                 'matched' => $matched,
                 'matchValue' => $matchValue,
+                'billToMatched' => $billToMatched,
             ];
             foreach ($candidates as $val) { $allCandidates[] = $val; }
         }
@@ -383,11 +419,22 @@ class SubmissionDraftController extends Controller
                 foreach ($allCandidates as $val) { if (abs($val - $ea) < 0.01) { $found = true; break; } }
                 if ($found) { $matchedAmounts[] = $ea; }
             }
-            $verified = count($matchedAmounts) === count($expectedAmounts) && count($expectedAmounts) > 0;
+            $verifiedAmounts = count($matchedAmounts) === count($expectedAmounts) && count($expectedAmounts) > 0;
         } else {
-            $verified = $expected > 0 && collect($allCandidates)->contains(function($val) use ($expected){ return abs($val - $expected) < 0.01; });
+            $verifiedAmounts = $expected > 0 && collect($allCandidates)->contains(function($val) use ($expected){ return abs($val - $expected) < 0.01; });
         }
-        return ['verified' => $verified, 'results' => $results, 'expected' => $expected, 'expectedAmounts' => $expectedAmounts, 'matchedAmounts' => $matchedAmounts];
+        $billToVerified = true;
+        if ($billToNorm !== '' && $invoicePdfCount > 0) { $billToVerified = ($billToMatches === $invoicePdfCount); }
+        $overallVerified = $verifiedAmounts && $billToVerified;
+        return [
+            'verified' => $overallVerified,
+            'results' => $results,
+            'expected' => $expected,
+            'expectedAmounts' => $expectedAmounts,
+            'matchedAmounts' => $matchedAmounts,
+            'billToVerified' => $billToVerified,
+            'billTo' => $billTo,
+        ];
     }
 
     public function accept(Request $request, SubmissionDraft $submission)

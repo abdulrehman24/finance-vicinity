@@ -9,7 +9,7 @@ export default function OCRScanner() {
   const [scanning, setScanning] = React.useState(true)
   const [currentFile, setCurrentFile] = React.useState(0)
   const [progress, setProgress] = React.useState(0)
-  const [result, setResult] = React.useState({ verified: false, expected: 0, expectedAmounts: [], matchedAmounts: [], results: [] })
+  const [result, setResult] = React.useState({ verified: false, expected: 0, expectedAmounts: [], matchedAmounts: [], results: [], billToVerified: true, billTo: '' })
 
   React.useEffect(() => {
     let cancelled = false
@@ -53,7 +53,9 @@ export default function OCRScanner() {
             expected: resp.data?.expected || 0,
             expectedAmounts: Array.isArray(resp.data?.expectedAmounts) ? resp.data.expectedAmounts : [],
             matchedAmounts: Array.isArray(resp.data?.matchedAmounts) ? resp.data.matchedAmounts : [],
-            results: Array.isArray(resp.data?.results) ? resp.data.results : []
+            results: Array.isArray(resp.data?.results) ? resp.data.results : [],
+            billToVerified: resp.data?.billToVerified !== false,
+            billTo: resp.data?.billTo || ''
           })
           setScanning(false)
         }
@@ -138,6 +140,30 @@ export default function OCRScanner() {
                     <span className="font-medium">Match Status:</span>
                     <span className="ml-1">{result.verified ? 'All entered amounts matched in PDFs' : 'Some amounts did not match'}</span>
                   </div>
+                  {result.billTo && (
+                    <div className="text-sm mt-2">
+                      <span className="font-medium">Bill To:</span>
+                      <span className="ml-1">{result.billTo}</span>
+                      {!result.billToVerified && (
+                        <div className="mt-2 text-red-300">
+                          The Bill To company is not present in one or more uploaded invoice PDFs.
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {Array.isArray(result.results) && result.results.length > 0 && (
+                    <div className="text-sm mt-3">
+                      <span className="font-medium">Invoice Files:</span>
+                      <div className="mt-2">
+                        {result.results.map((r, i) => (
+                          <div key={i} className={`flex items-center justify-between py-1 border-b border-vicinity-text/10`}>
+                            <span className="text-vicinity-text/80 truncate max-w-xs">{r.name}</span>
+                            <span className={`text-xs px-2 py-1 rounded border ${r.billToMatched ? 'border-green-500 text-green-400' : 'border-red-500 text-red-400'}`}>{r.billToMatched ? 'Bill To Found' : 'Bill To Missing'}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

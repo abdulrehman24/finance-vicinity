@@ -150,7 +150,8 @@ export default function SubmissionForm() {
                 <option value="">Select company to bill...</option>
                 <option value="Vicinity Studio Pte. Ltd.">Vicinity Studio Pte. Ltd.</option>
                 <option value="Vicinity Studio Sdn. Bhd.">Vicinity Studio Sdn. Bhd.</option>
-                <option value="Down The Aisle Pte. Ltd.">Down The Aisle Pte. Ltd.</option>
+                {/* make in camel case */}
+                <option value="Catharsis Pte. Ltd.">Catharsis Pte. Ltd.</option>
               </select>
             </div>
             <div>
