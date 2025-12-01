@@ -13,10 +13,13 @@ export default function SubmissionForm() {
     receiptType: '',
     amountRows: [{ id: 1, amount: '', description: '' }],
   })
-  const [errors, setErrors] = React.useState({ producerEmail: '' })
+  const [errors, setErrors] = React.useState({ producerEmail: '', billTo: '', documentType: '' })
+  const [rowErrors, setRowErrors] = React.useState({})
   const emailRef = React.useRef(null)
+  const billToRef = React.useRef(null)
   const [submitting, setSubmitting] = React.useState(false)
   const [producers, setProducers] = React.useState([])
+  const [companies, setCompanies] = React.useState([])
 
   React.useEffect(() => {
     (async () => {
@@ -38,6 +41,10 @@ export default function SubmissionForm() {
       try {
         const r2 = await axios.get('/producers/list')
         setProducers(Array.isArray(r2.data?.items) ? r2.data.items : [])
+      } catch(e) {}
+      try {
+        const r3 = await axios.get('/companies/list')
+        setCompanies(Array.isArray(r3.data?.items) ? r3.data.items : [])
       } catch(e) {}
     })()
   }, [])
@@ -146,17 +153,19 @@ export default function SubmissionForm() {
             </div>
             <div>
               <label className="block text-sm font-medium text-vicinity-text/80 mb-2">Bill To</label>
-              <select value={formData.billTo} onChange={(e)=>handleInput('billTo', e.target.value)} className="w-full px-4 py-3 bg-vicinity-input border border-vicinity-text/20 rounded-lg text-vicinity-text focus:ring-2 focus:ring-vicinity-text/50" required>
+              <select ref={billToRef} value={formData.billTo} onChange={(e)=>{ handleInput('billTo', e.target.value); if (errors.billTo) setErrors(prev=>({ ...prev, billTo: '' })) }} className={`w-full px-4 py-3 bg-vicinity-input border ${errors.billTo ? 'border-red-500 ring-2 ring-red-500/50' : 'border-vicinity-text/20'} rounded-lg text-vicinity-text focus:ring-2 focus:ring-vicinity-text/50`} required>
                 <option value="">Select company to bill...</option>
-                <option value="Vicinity Studio Pte. Ltd.">Vicinity Studio Pte. Ltd.</option>
-                <option value="Vicinity Studio Sdn. Bhd.">Vicinity Studio Sdn. Bhd.</option>
-                {/* make in camel case */}
-                <option value="Catharsis Pte. Ltd.">Catharsis Pte. Ltd.</option>
+                {companies.length === 0 ? (
+                  <option value="" disabled>No companies found</option>
+                ) : companies.map(c => (
+                  <option key={c.id} value={c.name}>{c.name}</option>
+                ))}
               </select>
+              {errors.billTo && (<p className="text-red-300 text-sm mt-2">{errors.billTo}</p>)}
             </div>
             <div>
               <label className="block text-sm font-medium text-vicinity-text/80 mb-2">Document Type</label>
-              <select value={formData.documentType} onChange={(e)=>handleInput('documentType', e.target.value)} className="w-full px-4 py-3 bg-vicinity-input border border-vicinity-text/20 rounded-lg text-vicinity-text focus:ring-2 focus:ring-vicinity-text/50">
+              <select value={formData.documentType} onChange={(e)=>{ handleInput('documentType', e.target.value); if (errors.documentType) setErrors(prev=>({ ...prev, documentType: '' })) }} className={`w-full px-4 py-3 bg-vicinity-input border ${errors.documentType ? 'border-red-500 ring-2 ring-red-500/50' : 'border-vicinity-text/20'} rounded-lg text-vicinity-text focus:ring-2 focus:ring-vicinity-text/50`} required>
                 <option value="invoice">Invoice</option>
                 <option value="tr">Talent Release Forms (TR)</option>
                 <option value="receipt">Receipt</option>
@@ -192,17 +201,19 @@ export default function SubmissionForm() {
                     <div>
                       <label className="block text-sm font-medium text-vicinity-text/70 mb-1">Amount ($)</label>
                       <div className="flex items-center space-x-2">
-                        <input type="number" value={row.amount} onChange={(e)=>handleAmountRowChange(row.id,'amount',e.target.value)} placeholder="0.00" step="0.01" className="flex-1 px-3 py-2 bg-vicinity-input border border-vicinity-text/20 rounded-lg text-vicinity-text placeholder-vicinity-text/30 focus:ring-2 focus:ring-vicinity-text/50 focus:border-transparent" required />
-                        {formData.amountRows.length > 1 && (
-                          <button type="button" onClick={()=>removeAmountRow(row.id)} className="p-2 text-red-400 hover:text-red-300">
-                            <FiTrash2 className="w-4 h-4" />
-                          </button>
-                        )}
+                        <input type="number" value={row.amount} onChange={(e)=>{ handleAmountRowChange(row.id,'amount',e.target.value); if (rowErrors[row.id]?.amount) setRowErrors(prev=>({ ...prev, [row.id]: { ...(prev[row.id]||{}), amount: false } })) }} placeholder="0.00" step="0.01" className={`flex-1 px-3 py-2 bg-vicinity-input border ${rowErrors[row.id]?.amount ? 'border-red-500 ring-2 ring-red-500/50' : 'border-vicinity-text/20'} rounded-lg text-vicinity-text placeholder-vicinity-text/30 focus:ring-2 focus:ring-vicinity-text/50 focus:border-transparent`} required />
+                      {formData.amountRows.length > 1 && (
+                        <button type="button" onClick={()=>removeAmountRow(row.id)} className="p-2 text-red-400 hover:text-red-300">
+                          <FiTrash2 className="w-4 h-4" />
+                        </button>
+                      )}
                       </div>
+                      {rowErrors[row.id]?.amount && (<p className="text-red-300 text-sm mt-2">Enter a valid amount</p>)}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-vicinity-text/70 mb-1">Description</label>
-                      <input type="text" value={row.description} onChange={(e)=>handleAmountRowChange(row.id,'description',e.target.value)} placeholder="Brief description of the work..." className="w-full px-3 py-2 bg-vicinity-input border border-vicinity-text/20 rounded-lg text-vicinity-text placeholder-vicinity-text/30 focus:ring-2 focus:ring-vicinity-text/50 focus:border-transparent" required />
+                      <input type="text" value={row.description} onChange={(e)=>{ handleAmountRowChange(row.id,'description',e.target.value); if (rowErrors[row.id]?.description) setRowErrors(prev=>({ ...prev, [row.id]: { ...(prev[row.id]||{}), description: false } })) }} placeholder="Brief description of the work..." className={`w-full px-3 py-2 bg-vicinity-input border ${rowErrors[row.id]?.description ? 'border-red-500 ring-2 ring-red-500/50' : 'border-vicinity-text/20'} rounded-lg text-vicinity-text placeholder-vicinity-text/30 focus:ring-2 focus:ring-vicinity-text/50 focus:border-transparent`} required />
+                      {rowErrors[row.id]?.description && (<p className="text-red-300 text-sm mt-2">Description is required</p>)}
                     </div>
                   </div>
                 ))}
@@ -213,10 +224,31 @@ export default function SubmissionForm() {
             </div>
             <button type="button" disabled={submitting} onClick={async ()=>{ 
               if (!formData.producerEmail.trim()) { 
-                setErrors({ producerEmail: 'Please enter producer email' }); 
+                setErrors(prev=>({ ...prev, producerEmail: 'Please enter producer email' })); 
                 if (emailRef.current) emailRef.current.focus(); 
                 return 
               } 
+              if (!formData.billTo.trim()) {
+                setErrors(prev=>({ ...prev, billTo: 'Please select Bill To' }));
+                if (billToRef.current) billToRef.current.focus();
+                return
+              }
+              if (!formData.documentType.trim()) {
+                setErrors(prev=>({ ...prev, documentType: 'Please select Document Type' }));
+                return
+              }
+              const perRowErrors = {}
+              let hasRowError = false
+              formData.amountRows.forEach(r => {
+                const amt = parseFloat(r.amount)
+                const amtInvalid = !(amt > 0)
+                const descInvalid = !(r.description && r.description.trim().length > 0)
+                if (amtInvalid || descInvalid) {
+                  hasRowError = true
+                  perRowErrors[r.id] = { amount: amtInvalid, description: descInvalid }
+                }
+              })
+              if (hasRowError) { setRowErrors(perRowErrors); return }
               const total = calculateTotalAmount()
               const details = { producerEmail: formData.producerEmail, billTo: formData.billTo, documentType: formData.documentType, receiptType: formData.receiptType, projectCode: formData.projectCode, amountRows: formData.amountRows, total }
               localStorage.setItem('submission_details', JSON.stringify(details))
@@ -227,8 +259,27 @@ export default function SubmissionForm() {
                 router.visit('/document-upload') 
               } catch(e) {
                 const msg = e?.response?.data?.message
-                const fieldErr = e?.response?.data?.errors?.producerEmail?.[0]
-                setErrors({ producerEmail: fieldErr || msg || 'Please enter a valid email' })
+                const errProducer = e?.response?.data?.errors?.producerEmail?.[0]
+                const errBillTo = e?.response?.data?.errors?.billTo?.[0]
+                const errDocType = e?.response?.data?.errors?.documentType?.[0]
+                const errAmount = e?.response?.data?.errors?.['amountRows.0.amount']?.[0] || e?.response?.data?.errors?.['amountRows.*.amount']?.[0]
+                const errDesc = e?.response?.data?.errors?.['amountRows.0.description']?.[0] || e?.response?.data?.errors?.['amountRows.*.description']?.[0]
+                setErrors(prev=>({ 
+                  ...prev,
+                  producerEmail: errProducer || prev.producerEmail,
+                  billTo: errBillTo || prev.billTo,
+                  documentType: errDocType || prev.documentType,
+                }))
+                if (errAmount || errDesc) {
+                  const perRow = {}
+                  formData.amountRows.forEach(r => {
+                    const amt = parseFloat(r.amount)
+                    const amtInvalid = !(amt > 0)
+                    const descInvalid = !(r.description && r.description.trim().length > 0)
+                    if (amtInvalid || descInvalid) { perRow[r.id] = { amount: amtInvalid, description: descInvalid } }
+                  })
+                  setRowErrors(perRow)
+                }
                 if (emailRef.current) emailRef.current.focus()
               } finally {
                 setSubmitting(false)

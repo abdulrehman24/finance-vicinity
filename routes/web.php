@@ -73,6 +73,13 @@ Route::middleware(['admin'])->group(function () {
     Route::post('/admin/producers', [\App\Http\Controllers\ProducerController::class, 'store']);
     Route::put('/admin/producers/{producer}', [\App\Http\Controllers\ProducerController::class, 'update']);
     Route::delete('/admin/producers/{producer}', [\App\Http\Controllers\ProducerController::class, 'destroy']);
+    Route::get('/admin/companies', function () {
+        return Inertia::render('AdminCompanies');
+    });
+    Route::get('/admin/companies/data', [\App\Http\Controllers\CompanyController::class, 'data']);
+    Route::post('/admin/companies', [\App\Http\Controllers\CompanyController::class, 'store']);
+    Route::put('/admin/companies/{company}', [\App\Http\Controllers\CompanyController::class, 'update']);
+    Route::delete('/admin/companies/{company}', [\App\Http\Controllers\CompanyController::class, 'destroy']);
     Route::get('/admin/settings', [\App\Http\Controllers\SettingsController::class, 'show']);
     Route::post('/admin/settings', [\App\Http\Controllers\SettingsController::class, 'update']);
 });
@@ -92,6 +99,7 @@ Route::middleware('verified')->group(function () {
     Route::get('/drafts/me', [\App\Http\Controllers\SubmissionDraftController::class, 'me']);
     Route::get('/drafts/list', [\App\Http\Controllers\SubmissionDraftController::class, 'list']);
     Route::get('/producers/list', [\App\Http\Controllers\ProducerController::class, 'list']);
+    Route::get('/companies/list', [\App\Http\Controllers\CompanyController::class, 'list']);
 });
 
 // Signed review links for producers (no authentication required)

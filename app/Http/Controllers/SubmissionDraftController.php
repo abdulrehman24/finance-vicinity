@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\SubmissionDraft;
 use App\Models\Producer;
+use App\Models\Company;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Storage;
@@ -24,12 +25,14 @@ class SubmissionDraftController extends Controller
     {
         $request->validate([
             'producerEmail' => 'required|email',
-            'billTo' => 'nullable|string',
+            'billTo' => 'required|string',
             'documentType' => 'required|string',
             'receiptType' => 'nullable|string',
             'projectCode' => 'nullable|string',
             'total' => 'required|numeric',
-            'amountRows' => 'array'
+            'amountRows' => 'array',
+            'amountRows.*.amount' => 'required|numeric|min:0.01',
+            'amountRows.*.description' => 'required|string'
         ]);
         $email = $this->email($request);
         $draft = SubmissionDraft::firstOrCreate(
@@ -38,6 +41,7 @@ class SubmissionDraftController extends Controller
                 'producer_in_charge' => $request->input('producerEmail'),
                 'producer_id' => optional(Producer::where('email', $request->input('producerEmail'))->first())->id,
                 'bill_to' => $request->input('BillTo', $request->input('billTo')),
+                'bill_to_id' => optional(Company::where('name', $request->input('BillTo', $request->input('billTo')))->first())->id,
                 'document_type' => $request->input('documentType'),
                 'receipt_type' => $request->input('receiptType'),
                 'project_code' => $request->input('projectCode'),
@@ -52,6 +56,7 @@ class SubmissionDraftController extends Controller
             'producer_in_charge' => $request->input('producerEmail'),
             'producer_id' => optional(Producer::where('email', $request->input('producerEmail'))->first())->id,
             'bill_to' => $request->input('BillTo', $request->input('billTo')),
+            'bill_to_id' => optional(Company::where('name', $request->input('BillTo', $request->input('billTo')))->first())->id,
             'document_type' => $request->input('documentType'),
             'receipt_type' => $request->input('receiptType'),
             'project_code' => $request->input('projectCode'),

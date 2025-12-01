@@ -63,9 +63,11 @@ export default function AdminSettings() {
       setFaviconPreview(s.favicon_url || '/favicon.ico')
       setSiteTitle(s.site_title || '')
       try {
-        // update global props for immediate reflection in layouts
         window.Inertia.page.props.settings = { finance_email: s.finance_email, logoUrl: s.logo_url, site_title: s.site_title, faviconUrl: s.favicon_url }
       } catch(e) {}
+    }
+    if (ok) {
+      try { window.location.reload() } catch(e) {}
     }
   }
 

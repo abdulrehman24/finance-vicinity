@@ -18,22 +18,22 @@
         <td align="center">
           <table role="presentation" width="600" cellspacing="0" cellpadding="0" class="container" style="max-width:600px; margin:24px; background:#111827; border-radius:16px; overflow:hidden; border:1px solid rgba(255,255,255,0.08);">
             <tr>
-              <td class="p-24" style="background:linear-gradient(135deg,#ffffff 0%,#f3bec7 100%); padding:24px;">
+              <td class="p-24" style="background:#4a5a67; padding:24px;">
                 <table role="presentation" width="100%">
                   <tr>
                     <td style="width:48px;">
                       <img src="{{ $logoUrl ?? asset('logo.webp') }}" style="height:24px; width:auto; display:block;" alt="Logo" />
                     </td>
                     <td>
-                      <div style="color:#0f172a;">
+                      <div style="color:#ebc1b6;">
                         <div style="font-size:18px; font-weight:bold;">Vicinity</div>
                         <div style="font-size:12px; opacity:0.8;">Submission Update</div>
                       </div>
                     </td>
                   </tr>
                 </table>
-                <h1 style="margin:12px 0 0; font-size:22px; line-height:1.3; color:#0f172a;">Your Submission Was Rejected</h1>
-                <p style="margin:8px 0 0; color:#0f172a; opacity:0.8;">Reviewed by {{ ucfirst($role) }}.</p>
+                <h1 style="margin:12px 0 0; font-size:22px; line-height:1.3; color:#ebc1b6;">Your Submission Was Rejected</h1>
+                <p style="margin:8px 0 0; color:#ebc1b6; opacity:0.8;">Reviewed by {{ ucfirst($role) }}.</p>
               </td>
             </tr>
             <tr>

@@ -38,6 +38,12 @@ export default function AdminLayout({ children }) {
               <span className={`${collapsed ? 'hidden' : 'block'}`}>Producers</span>
             </span>
           </Link>
+          <Link href="/admin/companies" className={linkCls('/admin/companies')}>
+            <span className="inline-flex items-center space-x-2">
+              <FiList />
+              <span className={`${collapsed ? 'hidden' : 'block'}`}>Companies (Bill To)</span>
+            </span>
+          </Link>
           <Link href="/admin/settings" className={linkCls('/admin/settings')}>
             <span className="inline-flex items-center space-x-2">
               <FiList />
