@@ -224,7 +224,10 @@ class SubmissionDraftController extends Controller
             $lower = strtolower($line);
             $hasLabel = (strpos($lower, 'total') !== false) || (strpos($lower, 'amount due') !== false) || (strpos($lower, 'balance due') !== false) || (strpos($lower, 'grand total') !== false) || (strpos($lower, 'invoice total') !== false) || (strpos($lower, 'amount payable') !== false);
             
-            preg_match_all('/(?:s\s*\$|sgd|myr|usd)?(?:\s|\x{00A0})*\$?(?:\s|\x{00A0})*(-?\d{1,3}(?:,\d{3})*(?:\.\d{1,2})|-?\d+(?:\.\d{1,2})?)/iu', $line, $m);
+            $line = is_string($line) ? $line : '';
+            $line = @iconv('UTF-8', 'UTF-8//IGNORE', $line);
+            $line = str_replace("\xC2\xA0", ' ', $line);
+            preg_match_all('/(?:s\s*\$|sgd|myr|usd)?\s*\$?\s*(-?\d{1,3}(?:,\d{3})*(?:\.\d{1,2})|-?\d+(?:\.\d{1,2})?)/i', $line, $m);
             if (!empty($m[1])) {
                 foreach ($m[1] as $raw) {
                     $val = (float) str_replace(',', '', $raw);
