@@ -74,7 +74,7 @@ class SubmissionDraftController extends Controller
 
         $stored = [];
         if ($request->hasFile('files')) {
-            $request->validate(['files.*' => 'file|mimes:pdf,png,jpg,jpeg,gif,webp|max:10240']);
+            $request->validate(['files.*' => 'file|mimes:pdf,png,jpg,jpeg,gif,webp|max:51200']);
             $assigned = (array) $request->input('assignedTypes', []);
             if ($draft->status === 'draft') {
                 $existing = is_array($draft->files) ? $draft->files : [];
