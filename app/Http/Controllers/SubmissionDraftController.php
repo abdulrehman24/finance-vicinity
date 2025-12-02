@@ -226,8 +226,11 @@ class SubmissionDraftController extends Controller
             
             $line = is_string($line) ? $line : '';
             $line = @iconv('UTF-8', 'UTF-8//IGNORE', $line);
-            $line = str_replace("\xC2\xA0", ' ', $line);
-            preg_match_all('/(?:s\s*\$|sgd|myr|usd)?\s*\$?\s*(-?\d{1,3}(?:,\d{3})*(?:\.\d{1,2})|-?\d+(?:\.\d{1,2})?)/i', $line, $m);
+            $line = (string) $line;
+            $line = str_replace(["\xC2\xA0","\xE2\x80\xAF","\xE2\x80\x89","\xE2\x80\x8A","\xE2\x80\x88"], ' ', $line);
+            $line = str_replace("\xEF\xBC\x84", '$', $line);
+            $line = preg_replace('/(?<=\d)(?:\xC2\xA0|\xE2\x80\xAF|\xE2\x80\x89|\xE2\x80\x8A|\xE2\x80\x88)(?=\d)/', '', $line);
+            preg_match_all('/(?:s\s*\$|sgd|myr|usd)?\s*\$?\s*(-?\d{1,3}(?:,\d{3})*(?:\.\d{0,2})|-?\d+(?:\.\d{0,2})?)/i', $line, $m);
             if (!empty($m[1])) {
                 foreach ($m[1] as $raw) {
                     $val = (float) str_replace(',', '', $raw);
