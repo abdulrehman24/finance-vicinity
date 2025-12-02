@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -e
+git pull
 composer install
 npm run build
 php artisan migrate
