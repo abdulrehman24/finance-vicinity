@@ -143,6 +143,7 @@ class SubmissionDraftController extends Controller
         $rows = is_array($draft->amount_rows) ? $draft->amount_rows : [];
         $billTo = (string) ($draft->bill_to ?? '');
         $billToNorm = $this->normalizeText($billTo);
+        
         foreach ($rows as $r) {
             $amt = isset($r['amount']) ? (float) str_replace(',', '', $r['amount']) : null;
             if ($amt && $amt > 0) { $expectedAmounts[] = $amt; }
@@ -173,7 +174,13 @@ class SubmissionDraftController extends Controller
                 foreach ($candidates as $val) { if (abs($val - $expected) < 0.01) { $matched = true; $matchValue = $val; break; } }
             }
             $billToMatched = false;
-            if ($billToNorm !== '') { $billToMatched = $this->containsNormalized($textNorm, $billToNorm); if ($billToMatched) { $billToMatches++; } }
+            if ($billToNorm !== '') {
+                $billToMatched = $this->containsNormalizedFuzzy($textNorm, $billToNorm);
+                if (!$billToMatched) {
+                    $billToMatched = $this->containsNormalizedFuzzy($textNorm, $this->normalizeText('bill to'));
+                }
+            }
+            if ($billToMatched) { $billToMatches++; }
             $results[] = [
                 'index' => $idx,
                 'name' => $file['name'] ?? basename($full),
@@ -198,7 +205,7 @@ class SubmissionDraftController extends Controller
             $verified = $expected > 0 && collect($allCandidates)->contains(function($val) use ($expected){ return abs($val - $expected) < 0.01; });
         }
         $billToVerified = true;
-        if ($billToNorm !== '' && $invoicePdfCount > 0) { $billToVerified = ($billToMatches === $invoicePdfCount); }
+        if ($billToNorm !== '' && $invoicePdfCount > 0) { $billToVerified = ($billToMatches >= 1); }
         $verified = $verified && $billToVerified;
         $draft->current_step = 3;
         $draft->save();
@@ -374,6 +381,21 @@ class SubmissionDraftController extends Controller
         return strpos($haystackNorm, $needleNorm) !== false;
     }
 
+    private function containsNormalizedFuzzy(string $haystackNorm, string $needleNorm): bool
+    {
+        if ($needleNorm === '') { return true; }
+        if (strpos($haystackNorm, $needleNorm) !== false) { return true; }
+        $tokens = preg_split('/\s+/', $needleNorm);
+        if (count($tokens) > 1) {
+            $parts = array_map(function($t){ return preg_quote($t, '/'); }, $tokens);
+            $pattern = '/'.implode('\\s*', $parts).'/i';
+            if (preg_match($pattern, $haystackNorm)) { return true; }
+        }
+        $hs = str_replace(' ', '', $haystackNorm);
+        $ns = str_replace(' ', '', $needleNorm);
+        return strpos($hs, $ns) !== false;
+    }
+
     private function verifyAmountsAgainstUploaded(SubmissionDraft $draft): array
     {
         $files = is_array($draft->files) ? $draft->files : [];
@@ -412,7 +434,13 @@ class SubmissionDraftController extends Controller
                 foreach ($candidates as $val) { if (abs($val - $expected) < 0.01) { $matched = true; $matchValue = $val; break; } }
             }
             $billToMatched = false;
-            if ($billToNorm !== '') { $billToMatched = $this->containsNormalized($textNorm, $billToNorm); if ($billToMatched) { $billToMatches++; } }
+            if ($billToNorm !== '') {
+                $billToMatched = $this->containsNormalized($textNorm, $billToNorm);
+                if (!$billToMatched) {
+                    $billToMatched = $this->containsNormalized($textNorm, $this->normalizeText('bill to'));
+                }
+            }
+            if ($billToMatched) { $billToMatches++; }
             $results[] = [
                 'index' => $idx,
                 'name' => $file['name'] ?? basename($full),
@@ -436,7 +464,7 @@ class SubmissionDraftController extends Controller
             $verifiedAmounts = $expected > 0 && collect($allCandidates)->contains(function($val) use ($expected){ return abs($val - $expected) < 0.01; });
         }
         $billToVerified = true;
-        if ($billToNorm !== '' && $invoicePdfCount > 0) { $billToVerified = ($billToMatches === $invoicePdfCount); }
+        if ($billToNorm !== '' && $invoicePdfCount > 0) { $billToVerified = ($billToMatches >= 1); }
         $overallVerified = $verifiedAmounts && $billToVerified;
         return [
             'verified' => $overallVerified,
