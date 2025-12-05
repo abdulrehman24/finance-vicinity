@@ -23,6 +23,8 @@ export default function Dashboard() {
           amount: String(i.total_amount || 0),
           createdAt: i.updated_at || i.created_at,
           status: i.status || 'pending',
+          producerStatus: i.accepted_by_producer || 'pending',
+          financeStatus: i.accepted_by_finance || 'pending',
           invoiceNumber: i.invoice_number,
           billTo: i.bill_to,
           projectCode: i.project_code,
@@ -113,6 +115,16 @@ export default function Dashboard() {
                   const isApproved = s.status === 'approved' || s.status === 'accepted'
                   const statusColor = s.status === 'pending' ? 'bg-yellow-900/30 text-yellow-200 border-yellow-700/50' : isApproved ? 'bg-green-900/30 text-green-200 border-green-700/50' : 'bg-red-900/30 text-red-200 border-red-700/50'
                   const typeLabel = s.documentType === 'tr' ? 'Talent Release Forms' : s.documentType === 'receipt' ? 'Receipt' : s.documentType === 'invoice' ? 'Invoice' : s.documentType
+                  
+                  const producerStatus = s.producerStatus ? s.producerStatus.toLowerCase() : 'pending'
+                  const financeStatus = s.financeStatus ? s.financeStatus.toLowerCase() : 'pending'
+                  
+                  const getStatusColor = (status) => {
+                    if (status === 'accepted' || status === 'approved') return 'bg-green-900/30 text-green-200 border-green-700/50'
+                    if (status === 'rejected') return 'bg-red-900/30 text-red-200 border-red-700/50'
+                    return 'bg-yellow-900/30 text-yellow-200 border-yellow-700/50'
+                  }
+
                   return (
                     <div key={s.id} className="relative border border-vicinity-text/10 rounded-xl bg-vicinity-card/80 backdrop-blur p-5 hover:shadow-xl hover:-translate-y-0.5 transition">
                       <div className="flex items-start justify-between">
@@ -123,14 +135,30 @@ export default function Dashboard() {
                             <p className="text-lg font-semibold text-vicinity-text">{typeLabel}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col items-end gap-2">
                           <span className="px-2 py-1 rounded-full text-xs bg-vicinity-text/10 border border-vicinity-text/20 text-vicinity-text">{s.invoiceNumber || '-'}</span>
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusColor} flex items-center space-x-1`}>
-                            {s.status === 'pending' && <FiClock className="w-3 h-3" />}
-                            {isApproved && <FiCheck className="w-3 h-3" />}
-                            {!isApproved && s.status !== 'pending' && <FiX className="w-3 h-3" />}
-                            <span className="capitalize">{s.status}</span>
-                          </span>
+                          <div className="flex flex-col gap-1.5 mt-1">
+                             {/* Producer Status */}
+                             <div className="flex items-center gap-2 justify-end">
+                                <span className="text-[10px] uppercase tracking-wider text-vicinity-text/50 font-medium">Producer</span>
+                                <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(producerStatus)} flex items-center space-x-1 min-w-[90px] justify-center`}>
+                                  {producerStatus === 'pending' && <FiClock className="w-3 h-3" />}
+                                  {(producerStatus === 'accepted' || producerStatus === 'approved') && <FiCheck className="w-3 h-3" />}
+                                  {producerStatus === 'rejected' && <FiX className="w-3 h-3" />}
+                                  <span className="capitalize">{producerStatus}</span>
+                                </span>
+                             </div>
+                             {/* Finance Status */}
+                             <div className="flex items-center gap-2 justify-end">
+                                <span className="text-[10px] uppercase tracking-wider text-vicinity-text/50 font-medium">Finance</span>
+                                <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(financeStatus)} flex items-center space-x-1 min-w-[90px] justify-center`}>
+                                  {financeStatus === 'pending' && <FiClock className="w-3 h-3" />}
+                                  {(financeStatus === 'accepted' || financeStatus === 'approved') && <FiCheck className="w-3 h-3" />}
+                                  {financeStatus === 'rejected' && <FiX className="w-3 h-3" />}
+                                  <span className="capitalize">{financeStatus}</span>
+                                </span>
+                             </div>
+                          </div>
                         </div>
                       </div>
                       <div className="mt-4 flex items-center justify-between">

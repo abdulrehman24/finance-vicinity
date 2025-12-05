@@ -31,7 +31,7 @@ class SubmissionNotification extends Mailable implements ShouldQueue
         $invNo = (string) ($this->submission->invoice_number ?? '');
         $amt = number_format((float) ($this->submission->total_amount ?? 0), 2);
         $titleCode = $code !== '' ? $code : $invNo;
-        $subject = 'INV - '.($titleCode !== '' ? $titleCode : 'N/A').' - '.$amt;
+        $subject = 'INV - '.($titleCode !== '' ? $titleCode : 'N/A').' - $'.$amt;
         $mail = $this->subject($subject)
             ->view('emails.submission_notification')
             ->with([

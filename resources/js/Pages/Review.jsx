@@ -12,7 +12,7 @@ export default function Review() {
   const total = details?.total || 0
 
   function submitForApproval() {
-    if (ocrStatus !== 'processed') return
+    if (ocrStatus !== 'processed' && ocrStatus !== 'skipped') return
     const submission = {
       id: Date.now().toString(),
       documentType: details.documentType,
@@ -109,12 +109,20 @@ export default function Review() {
                 </div>
               </div>
             )}
+            {ocrStatus === 'skipped' && (
+              <div className="mt-4 bg-yellow-900/20 border border-yellow-700/50 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-yellow-300">OCR Verification:</span>
+                  <span className="font-medium text-yellow-400">Skipped</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         <div className="mt-6 flex items-center justify-between">
           <button onClick={()=>router.visit('/ocr')} className="px-4 py-3 border border-vicinity-text/20 rounded-lg text-vicinity-text font-medium hover:bg-vicinity-hover/20">Back</button>
-          <button disabled={ocrStatus !== 'processed'} onClick={submitForApproval} className={`bg-green-600 text-white py-3 px-4 rounded-lg font-medium flex items-center space-x-2 ${ocrStatus !== 'processed' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-500'}`}><FiSend className="w-4 h-4" /><span>Submit for Approval</span></button>
+          <button disabled={ocrStatus !== 'processed' && ocrStatus !== 'skipped'} onClick={submitForApproval} className={`bg-green-600 text-white py-3 px-4 rounded-lg font-medium flex items-center space-x-2 ${ocrStatus !== 'processed' && ocrStatus !== 'skipped' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-500'}`}><FiSend className="w-4 h-4" /><span>Submit for Approval</span></button>
         </div>
       </div>
     </AppLayout>

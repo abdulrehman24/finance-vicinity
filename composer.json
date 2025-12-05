@@ -7,6 +7,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "google/cloud-vision": "1.7",
         "inertiajs/inertia-laravel": "^2.0",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
@@ -14,7 +15,9 @@
         "setasign/fpdf": "^1.8",
         "setasign/fpdi": "^2.6",
         "smalot/pdfparser": "^2.12",
+        "spatie/pdf-to-image": "^1.2",
         "spatie/pdf-to-text": "^1.54",
+        "thiagoalessio/tesseract_ocr": "^2.13",
         "yajra/laravel-datatables-oracle": "12"
     },
     "require-dev": {

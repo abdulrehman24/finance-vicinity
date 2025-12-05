@@ -161,9 +161,8 @@ class SubmissionDraftController extends Controller
         $service = new PdfInvoiceVerificationService();
         $check = $service->verify($draft);
         if (!$check['verified']) {
-            $msg = 'Entered total does not match amounts in uploaded PDFs';
-            if (isset($check['billToVerified']) && !$check['billToVerified']) { $msg = 'Bill To company does not match in uploaded invoices'; }
-            return response()->json(['success' => false, 'message' => $msg, 'results' => $check['results']], 422);
+            $msg = 'Entered amount not found as FINAL TOTAL on the invoice';
+            return response()->json(['success' => false, 'message' => $msg], 422);
         }
         $draft->status = 'pending';
         if (!$draft->invoice_number) {

@@ -5,64 +5,21 @@ import axios from 'axios'
 import { FiEye } from 'react-icons/fi'
 
 export default function OCRScanner() {
-  const files = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('vicinity_uploaded_files') || '[]') : []
   const [scanning, setScanning] = React.useState(true)
-  const [currentFile, setCurrentFile] = React.useState(0)
-  const [progress, setProgress] = React.useState(0)
-  const [result, setResult] = React.useState({ verified: false, expected: 0, expectedAmounts: [], matchedAmounts: [], results: [], billToVerified: true, billTo: '' })
+  const [result, setResult] = React.useState({ amountFound: false, billToMatched: false })
 
   React.useEffect(() => {
     let cancelled = false
     async function run() {
-      if (files.length === 0) {
-        setScanning(false)
-        return
-      }
-      let i = 0
-      setCurrentFile(0)
-      setProgress(0)
-      const perFileMs = 800
-      function scanNext() {
-        setCurrentFile(i)
-        let start = Date.now()
-        const tick = () => {
-          const elapsed = Date.now() - start
-          const p = Math.min(1, elapsed / perFileMs)
-          const overall = ((i / files.length) + (p / files.length)) * 100
-          setProgress(overall)
-          if (p < 1) {
-            timer = setTimeout(tick, 100)
-          } else {
-            i += 1
-            if (i < files.length) {
-              start = Date.now()
-              scanNext()
-            } else {
-              setProgress(100)
-            }
-          }
-        }
-        timer = setTimeout(tick, 100)
-      }
-      let timer = setTimeout(scanNext, 200)
       try {
         const resp = await axios.post('/drafts/ocr')
         if (!cancelled) {
-          setResult({
-            verified: !!resp.data?.verified,
-            expected: resp.data?.expected || 0,
-            expectedAmounts: Array.isArray(resp.data?.expectedAmounts) ? resp.data.expectedAmounts : [],
-            matchedAmounts: Array.isArray(resp.data?.matchedAmounts) ? resp.data.matchedAmounts : [],
-            results: Array.isArray(resp.data?.results) ? resp.data.results : [],
-            billToVerified: resp.data?.billToVerified !== false,
-            billTo: resp.data?.billTo || ''
-          })
+          setResult({ amountFound: !!resp.data?.amountFound, billToMatched: !!resp.data?.billToMatched })
           setScanning(false)
         }
       } catch(e) {
         if (!cancelled) setScanning(false)
       }
-      return () => clearTimeout(timer)
     }
     run()
     return () => { cancelled = true }
@@ -102,11 +59,11 @@ export default function OCRScanner() {
             <div className="w-16 h-16 bg-vicinity-text/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-vicinity-text/20">
               <FiEye className="w-8 h-8 text-vicinity-text" />
             </div>
-            <h3 className="text-lg font-medium text-vicinity-text">OCR Document Verification</h3>
-            <p className="text-vicinity-text/60">{scanning && files.length > 0 ? `Scanning document ${Math.min(currentFile+1, files.length)} of ${files.length}...` : files.length === 0 ? 'No files to scan' : 'Processing complete'}</p>
+            <h3 className="text-lg font-medium text-vicinity-text">Invoice Verification</h3>
+            <p className="text-vicinity-text/60">{scanning ? 'Verifying invoice total…' : 'Processing complete'}</p>
           </div>
           <div className="w-full bg-vicinity-input rounded-full h-2">
-            <div className="bg-vicinity-text h-2 rounded-full" style={{ width: `${progress}%` }} />
+            <div className="bg-vicinity-text h-2 rounded-full" style={{ width: `${scanning ? 50 : 100}%` }} />
           </div>
           {scanning && (
             <div className="flex items-center justify-center space-x-3 py-8">
@@ -116,64 +73,31 @@ export default function OCRScanner() {
           )}
           {!scanning && (
             <div className="mt-6">
-              {!result.verified && (
-                <div className={`p-3 rounded-lg border ${result.verified ? 'border-green-500/40 bg-green-900/20' : 'border-red-500/40 bg-red-900/20'}`}>
-                  <div className="text-sm">
-                    <span className="font-medium">Entered Total:</span> <span className="ml-1">${Number(result.expected || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                  </div>
-                  {Array.isArray(result.expectedAmounts) && result.expectedAmounts.length > 0 && (
-                    <div className="text-sm mt-1">
-                      <span className="font-medium">Line Item Amounts:</span>
-                      <div className="mt-2">
-                        {result.expectedAmounts.map((amt, i) => {
-                          const matched = (result.matchedAmounts || []).some(m => Math.abs(Number(m) - Number(amt)) < 0.01)
-                          return (
-                            <span key={i} className={`inline-block mr-2 mb-1 px-2 py-1 rounded border text-xs ${matched ? 'border-green-500 text-green-400' : 'border-red-500 text-red-400'}`}>
-                              ${Number(amt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </span>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-                  <div className="text-sm mt-2">
-                    <span className="font-medium">Match Status:</span>
-                    <span className="ml-1">{result.verified ? 'All entered amounts matched in PDFs' : 'Some amounts did not match'}</span>
-                  </div>
-                  {result.billTo && (
-                    <div className="text-sm mt-2">
-                      <span className="font-medium">Bill To:</span>
-                      <span className="ml-1">{result.billTo}</span>
-                      {!result.billToVerified && (
-                        <div className="mt-2 text-red-300">
-                          The Bill To company is not present in one or more uploaded invoice PDFs.
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {Array.isArray(result.results) && result.results.length > 0 && (
-                    <div className="text-sm mt-3">
-                      <span className="font-medium">Invoice Files:</span>
-                      <div className="mt-2">
-                        {result.results.map((r, i) => (
-                          <div key={i} className={`flex items-center justify-between py-1 border-b border-vicinity-text/10`}>
-                            <span className="text-vicinity-text/80 truncate max-w-xs">{r.name}</span>
-                            <span className={`text-xs px-2 py-1 rounded border ${r.billToMatched ? 'border-green-500 text-green-400' : 'border-red-500 text-red-400'}`}>{r.billToMatched ? 'Bill To Found' : 'Bill To Missing'}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+              <div className={`p-3 rounded-lg border ${result.amountFound ? 'border-green-500/40 bg-green-900/20' : 'border-red-500/40 bg-red-900/20'}`}>
+                <div className="text-sm">
+                  <span className="font-medium">Match Status:</span>
+                  <span className="ml-1">{result.amountFound ? 'Expected amount found as FINAL TOTAL' : 'Expected amount not found as FINAL TOTAL'}</span>
                 </div>
-              )}
+              </div>
+              <div className={`mt-3 p-3 rounded-lg border ${result.billToMatched ? 'border-green-500/40 bg-green-900/20' : 'border-yellow-500/40 bg-yellow-900/20'}`}>
+                <div className="text-sm">
+                  <span className="font-medium">Bill To Match:</span>
+                  <span className="ml-1">{result.billToMatched ? 'Expected Bill To matched' : 'Expected Bill To not matched'}</span>
+                </div>
+              </div>
             </div>
           )}
         </div>
 
-        {!scanning && files.length > 0 && (
+        {!scanning && (
           <div className="mt-6 flex items-center justify-between">
             <button onClick={()=>{ router.visit('/document-upload') }} className="px-4 py-3 border border-vicinity-text/20 rounded-lg text-vicinity-text font-medium hover:bg-vicinity-hover/20">Back to Upload</button>
-            <button disabled={!result.verified} onClick={async ()=>{ if (!result.verified) return; localStorage.setItem('vicinity_ocr_status', 'processed'); router.visit('/review') }} className={`bg-vicinity-text text-vicinity-bg py-3 px-4 rounded-lg font-bold hover:bg-white ${!result.verified ? 'opacity-50 cursor-not-allowed' : ''}`}>Continue to Review</button>
+            <div className="flex items-center space-x-3">
+              {!(result.amountFound && result.billToMatched) && (
+                <button onClick={()=>{ localStorage.setItem('vicinity_ocr_status', 'skipped'); router.visit('/review') }} className="px-4 py-3 border border-vicinity-text/20 rounded-lg text-vicinity-text font-medium hover:bg-vicinity-hover/20">Continue without OCR</button>
+              )}
+              <button disabled={!(result.amountFound && result.billToMatched)} onClick={async ()=>{ if (!(result.amountFound && result.billToMatched)) return; localStorage.setItem('vicinity_ocr_status', 'processed'); router.visit('/review') }} className={`bg-vicinity-text text-vicinity-bg py-3 px-4 rounded-lg font-bold hover:bg-white ${!(result.amountFound && result.billToMatched) ? 'opacity-50 cursor-not-allowed' : ''}`}>Continue to Review</button>
+            </div>
           </div>
         )}
       </div>
