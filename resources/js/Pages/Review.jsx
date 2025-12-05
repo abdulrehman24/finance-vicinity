@@ -80,6 +80,12 @@ export default function Review() {
                 <span className="font-medium text-vicinity-text">{details.projectCode || '-'}</span>
               </div>
             )}
+            {details.documentType !== 'receipt' && (
+              <div className="flex items-center justify-between py-2 border-b border-vicinity-text/10">
+                <span className="flex items-center space-x-2 text-sm text-vicinity-text/60"><FiFileText className="w-4 h-4" /><span>Project Title:</span></span>
+                <span className="font-medium text-vicinity-text">{details.projectTitle || '-'}</span>
+              </div>
+            )}
             <div className="py-2 border-b border-vicinity-text/10">
               <div className="flex items-center justify-between">
                 <span className="flex items-center space-x-2 text-sm text-vicinity-text/60"><FiDollarSign className="w-4 h-4" /><span>Amount Details:</span></span>

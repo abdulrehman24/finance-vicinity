@@ -9,6 +9,7 @@ export default function DocumentUpload() {
   const [uploadedFiles, setUploadedFiles] = React.useState([])
   const [selectedDocType, setSelectedDocType] = React.useState('')
   const [editingFileId, setEditingFileId] = React.useState(null)
+  const [replaceFiles, setReplaceFiles] = React.useState(true)
   const currentType = typeof window !== 'undefined' ? localStorage.getItem('current_document_type') || 'invoice' : 'invoice'
 
   function inferTypeFromName(name) {
@@ -38,11 +39,12 @@ export default function DocumentUpload() {
           form.append('files[]', f.file)
           form.append('assignedTypes[]', f.assignedType)
         })
+        form.append('replace', replaceFiles ? '1' : '0')
         axios.post('/drafts/files', form, { headers: { 'Content-Type': 'multipart/form-data' } })
       } catch(e){}
       return merged
     })
-  }, [selectedDocType, currentType])
+  }, [selectedDocType, currentType, replaceFiles])
 
   React.useEffect(() => {
     (async () => {
@@ -216,13 +218,17 @@ export default function DocumentUpload() {
             </div>
           </div>
 
-          <div className="bg-vicinity-input/20 rounded-lg border border-vicinity-text/10 p-4">
-            <div className="flex items-center space-x-2 mb-2">
-              <FiPlus className="w-4 h-4 text-vicinity-text/60" />
-              <h4 className="font-medium text-vicinity-text">Optional Documents</h4>
-            </div>
-            <p className="text-sm text-vicinity-text/60">You can also upload supporting documents like receipts, correspondence, certificates, etc.</p>
+        <div className="bg-vicinity-input/20 rounded-lg border border-vicinity-text/10 p-4">
+          <div className="flex items-center space-x-2 mb-2">
+            <FiPlus className="w-4 h-4 text-vicinity-text/60" />
+            <h4 className="font-medium text-vicinity-text">Optional Documents</h4>
           </div>
+          <p className="text-sm text-vicinity-text/60">You can also upload supporting documents like receipts, correspondence, certificates, etc.</p>
+          <div className="mt-3 flex items-center space-x-2">
+            <input type="checkbox" checked={replaceFiles} onChange={(e)=>setReplaceFiles(e.target.checked)} className="w-4 h-4 rounded border border-vicinity-text/20 bg-vicinity-input" />
+            <span className="text-sm text-vicinity-text/60">Replace previous files on upload</span>
+          </div>
+        </div>
 
           <div {...getRootProps()} className={`border-2 border-dashed rounded-lg p-8 text-center ${isDragActive ? 'border-vicinity-text' : 'border-vicinity-text/30'} cursor-pointer transition-all`}>
             <input {...getInputProps()} />
@@ -236,7 +242,10 @@ export default function DocumentUpload() {
 
           {uploadedFiles.length > 0 && (
             <div className="space-y-3">
-              <h4 className="font-medium text-vicinity-text">Uploaded Files ({uploadedFiles.length})</h4>
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium text-vicinity-text">Uploaded Files ({uploadedFiles.length})</h4>
+                <button onClick={()=>clearUploads()} className="text-vicinity-text/60 hover:text-vicinity-text text-sm px-2 py-1 border border-vicinity-text/20 rounded">Clear</button>
+              </div>
               <div className="space-y-3">
                 {uploadedFiles.map((fileItem) => {
                   const Icon = getFileIcon(fileItem.type)
@@ -337,4 +346,9 @@ export default function DocumentUpload() {
     if (typeof window !== 'undefined') {
       localStorage.setItem('vicinity_uploaded_files', JSON.stringify(payload))
     }
+  }
+  function clearUploads() {
+    setUploadedFiles([])
+    persistUploads([])
+    try { axios.post('/drafts/files', { files: [] }) } catch(e){}
   }

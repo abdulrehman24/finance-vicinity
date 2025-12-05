@@ -6,7 +6,7 @@ import { FiEye } from 'react-icons/fi'
 
 export default function OCRScanner() {
   const [scanning, setScanning] = React.useState(true)
-  const [result, setResult] = React.useState({ amountFound: false, billToMatched: false })
+  const [result, setResult] = React.useState({ amountFound: false, billToMatched: false, details: [] })
 
   React.useEffect(() => {
     let cancelled = false
@@ -14,7 +14,8 @@ export default function OCRScanner() {
       try {
         const resp = await axios.post('/drafts/ocr')
         if (!cancelled) {
-          setResult({ amountFound: !!resp.data?.amountFound, billToMatched: !!resp.data?.billToMatched })
+          const d = resp.data || {}
+          setResult({ amountFound: !!d.amountFound, billToMatched: !!d.billToMatched, details: Array.isArray(d.details) ? d.details : [] })
           setScanning(false)
         }
       } catch(e) {
@@ -85,6 +86,38 @@ export default function OCRScanner() {
                   <span className="ml-1">{result.billToMatched ? 'Expected Bill To matched' : 'Expected Bill To not matched'}</span>
                 </div>
               </div>
+              {Array.isArray(result.details) && result.details.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-sm font-medium text-vicinity-text mb-2">Per-file Results</p>
+                  <div className="space-y-2">
+                    {result.details.map((d, idx)=>{
+                      const hasMatches = Array.isArray(d.matchedAmounts) && d.matchedAmounts.length > 0
+                      const hasMissing = Array.isArray(d.missingAmounts) && d.missingAmounts.length > 0
+                      return (
+                        <div key={idx} className={`p-3 rounded-lg border ${hasMatches ? 'border-green-500/40 bg-green-900/20' : 'border-red-500/40 bg-red-900/20'}`}>
+                          <div className="flex items-center justify-between">
+                            <div className="text-sm font-medium text-vicinity-text truncate">
+                              <span>{d.name || `File ${idx+1}`}</span>
+                              {d.assignedType ? <span className="ml-2 text-vicinity-text/60">{d.assignedType}</span> : null}
+                            </div>
+                            {d.url ? (
+                              <a href={d.url} target="_blank" rel="noreferrer" className="text-xs px-2 py-1 rounded bg-vicinity-text/10 border border-vicinity-text/20">Open</a>
+                            ) : null}
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {hasMatches && Array.isArray(d.matchedAmounts) && d.matchedAmounts.map((a,i)=> (
+                              <span key={`m-${i}`} className="text-xs px-2 py-1 rounded bg-green-800/30 border border-green-700/40 text-green-200">Matched: {a}</span>
+                            ))}
+                            {!hasMatches && hasMissing && Array.isArray(d.missingAmounts) && d.missingAmounts.map((a,i)=> (
+                              <span key={`x-${i}`} className="text-xs px-2 py-1 rounded bg-red-800/30 border border-red-700/40 text-red-200">Missing: {a}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -28,6 +28,7 @@ class SubmissionDraftController extends Controller
             'documentType' => 'required|string',
             'receiptType' => 'nullable|string',
             'projectCode' => 'nullable|string',
+            'projectTitle' => 'nullable|string',
             'total' => 'required|numeric',
             'amountRows' => 'array',
             'amountRows.*.amount' => 'required|numeric|min:0.01',
@@ -44,6 +45,7 @@ class SubmissionDraftController extends Controller
                 'document_type' => $request->input('documentType'),
                 'receipt_type' => $request->input('receiptType'),
                 'project_code' => $request->input('projectCode'),
+                'project_title' => $request->input('projectTitle'),
                 'total_amount' => $request->input('total'),
                 'amount_rows' => $request->input('amountRows'),
                 'files' => [],
@@ -59,6 +61,7 @@ class SubmissionDraftController extends Controller
             'document_type' => $request->input('documentType'),
             'receipt_type' => $request->input('receiptType'),
             'project_code' => $request->input('projectCode'),
+            'project_title' => $request->input('projectTitle'),
             'total_amount' => $request->input('total'),
             'amount_rows' => $request->input('amountRows'),
             'current_step' => 1,
@@ -75,13 +78,14 @@ class SubmissionDraftController extends Controller
         if ($request->hasFile('files')) {
             $request->validate(['files.*' => 'file|mimes:pdf,png,jpg,jpeg,gif,webp|max:51200']);
             $assigned = (array) $request->input('assignedTypes', []);
-            if ($draft->status === 'draft') {
+            $replace = (bool) $request->boolean('replace');
+            $dir = 'submissions/'.$draft->id;
+            if ($replace) {
                 $existing = is_array($draft->files) ? $draft->files : [];
                 foreach ($existing as $ex) {
                     $p = $ex['path'] ?? null;
                     if ($p) { \Illuminate\Support\Facades\Storage::disk('public')->delete($p); }
                 }
-                $dir = 'submissions/'.$draft->id;
                 \Illuminate\Support\Facades\Storage::disk('public')->deleteDirectory($dir);
                 $combined = (string) ($draft->combined_invoice_pdf ?? '');
                 if ($combined) { \Illuminate\Support\Facades\Storage::disk('public')->delete($combined); }
@@ -89,7 +93,7 @@ class SubmissionDraftController extends Controller
                 $draft->files = [];
             }
             foreach ($request->file('files') as $idx => $file) {
-                $path = $file->store('submissions/'.$draft->id, 'public');
+                $path = $file->store($dir, 'public');
                 $stored[] = [
                     'name' => $file->getClientOriginalName(),
                     'size' => $file->getSize(),
@@ -99,11 +103,25 @@ class SubmissionDraftController extends Controller
                     'url' => \Illuminate\Support\Facades\Storage::url($path),
                 ];
             }
+            if ($replace) {
+                $draft->files = array_values(array_filter($stored, function($f){ return isset($f['path']) && $f['path']; }));
+            } else {
+                $existing = is_array($draft->files) ? $draft->files : [];
+                $merged = array_merge($existing, $stored);
+                $dedup = [];
+                foreach ($merged as $f) {
+                    $key = (($f['name'] ?? '')).'|'.(string)($f['size'] ?? '');
+                    $dedup[$key] = $f;
+                }
+                $draft->files = array_values(array_filter($dedup, function($f){ return isset($f['path']) && $f['path']; }));
+            }
+            $combined = (string) ($draft->combined_invoice_pdf ?? '');
+            if ($combined) { \Illuminate\Support\Facades\Storage::disk('public')->delete($combined); }
+            $draft->combined_invoice_pdf = null;
         }
-
         $metaOnly = (array) $request->input('files', []);
         if ($stored) {
-            $draft->files = array_values($stored);
+            // already merged above
         } elseif ($request->has('files')) {
             $existing = is_array($draft->files) ? $draft->files : [];
             $present = [];
@@ -315,6 +333,9 @@ class SubmissionDraftController extends Controller
         $submission->accepted_by_finance = 'accepted';
         $submission->status = 'accepted';
         $submission->save();
+        try {
+            \Illuminate\Support\Facades\Mail::to($submission->user_email)->queue(new \App\Mail\SubmissionAcceptedNotification($submission));
+        } catch (\Throwable $e) {}
         return response('Finance accepted successfully');
     }
 

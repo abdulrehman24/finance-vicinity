@@ -142,6 +142,10 @@ export function AdminSubmissionModal({ selected, onClose }){
               <p className="font-medium text-vicinity-text">{selected.project_code || '-'}</p>
             </div>
             <div>
+              <p className="text-sm text-vicinity-text/60">Project Title</p>
+              <p className="font-medium text-vicinity-text">{selected.project_title || '-'}</p>
+            </div>
+            <div>
               <p className="text-sm text-vicinity-text/60">Bill To</p>
               <p className="font-medium text-vicinity-text">{selected.bill_to || '-'}</p>
             </div>

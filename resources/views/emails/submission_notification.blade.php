@@ -65,10 +65,18 @@
                       <td style="padding:6px 0; color:#9ca3af;">Project Code</td>
                       <td style="padding:6px 0; color:#ffffff;" align="right">{{ $submission->project_code }}</td>
                     </tr>
+                    <tr>
+                      <td style="padding:6px 0; color:#9ca3af;">Project Title</td>
+                      <td style="padding:6px 0; color:#ffffff;" align="right">{{ $submission->project_title }}</td>
+                    </tr>
                     @endif
                     <tr>
                       <td style="padding:6px 0; color:#9ca3af;">Invoice Number</td>
                       <td style="padding:6px 0; color:#ffffff;" align="right">{{ $submission->invoice_number }}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:6px 0; color:#9ca3af;">Invoice Created Date</td>
+                      <td style="padding:6px 0; color:#ffffff;" align="right">{{ optional($submission->created_at)->format('d M Y, h:i A') }}</td>
                     </tr>
                     <tr>
                       <td style="padding:6px 0; color:#9ca3af;">Total Amount</td>

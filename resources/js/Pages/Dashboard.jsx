@@ -28,6 +28,7 @@ export default function Dashboard() {
           invoiceNumber: i.invoice_number,
           billTo: i.bill_to,
           projectCode: i.project_code,
+          projectTitle: i.project_title,
           receiptType: i.receipt_type,
           amountRows: Array.isArray(i.amount_rows) ? i.amount_rows : [],
           files: Array.isArray(i.files) ? i.files : [],
@@ -223,10 +224,14 @@ export default function Dashboard() {
                     <p className="text-sm text-vicinity-text/60">Producer In Charge</p>
                     <p className="font-medium text-vicinity-text">{selected.producerInCharge || '-'}</p>
                   </div>
-                  <div>
-                    <p className="text-sm text-vicinity-text/60">Project Code</p>
-                    <p className="font-medium text-vicinity-text">{selected.projectCode || '-'}</p>
-                  </div>
+                <div>
+                  <p className="text-sm text-vicinity-text/60">Project Code</p>
+                  <p className="font-medium text-vicinity-text">{selected.projectCode || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-vicinity-text/60">Project Title</p>
+                  <p className="font-medium text-vicinity-text">{selected.projectTitle || '-'}</p>
+                </div>
                   <div>
                     <p className="text-sm text-vicinity-text/60">Bill To</p>
                     <p className="font-medium text-vicinity-text">{selected.billTo || '-'}</p>

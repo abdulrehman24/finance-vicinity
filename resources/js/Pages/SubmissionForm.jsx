@@ -10,6 +10,7 @@ export default function SubmissionForm() {
     producerEmail: '',
     billTo: '',
     projectCode: '',
+    projectTitle: '',
     receiptType: '',
     amountRows: [{ id: 1, amount: '', description: '' }],
   })
@@ -34,6 +35,7 @@ export default function SubmissionForm() {
             documentType: d.document_type || prev.documentType,
             receiptType: d.receipt_type || prev.receiptType,
             projectCode: d.project_code || '',
+            projectTitle: d.project_title || '',
             amountRows: Array.isArray(d.amount_rows) && d.amount_rows.length > 0 ? d.amount_rows : prev.amountRows,
           }))
         }
@@ -190,6 +192,12 @@ export default function SubmissionForm() {
                 <input type="text" value={formData.projectCode} onChange={(e)=>handleInput('projectCode', e.target.value)} placeholder="e.g., QU-5049" className="w-full px-4 py-3 bg-vicinity-input border border-vicinity-text/20 rounded-lg text-vicinity-text placeholder-vicinity-text/30 focus:ring-2 focus:ring-vicinity-text/50 focus:border-transparent" />
               </div>
             )}
+            {formData.documentType !== 'receipt' && (
+              <div>
+                <label className="block text-sm font-medium text-vicinity-text/80 mb-2">Project Title</label>
+                <input type="text" value={formData.projectTitle} onChange={(e)=>handleInput('projectTitle', e.target.value)} placeholder="e.g., Brand Film — Post Production" className="w-full px-4 py-3 bg-vicinity-input border border-vicinity-text/20 rounded-lg text-vicinity-text placeholder-vicinity-text/30 focus:ring-2 focus:ring-vicinity-text/50 focus:border-transparent" />
+              </div>
+            )}
             <div className="bg-vicinity-input/30 rounded-lg border border-vicinity-text/10">
               <div className="p-4 border-b border-vicinity-text/10 flex items-center justify-between">
                 <h4 className="font-medium text-vicinity-text">Amount Details</h4>
@@ -250,12 +258,12 @@ export default function SubmissionForm() {
               })
               if (hasRowError) { setRowErrors(perRowErrors); return }
               const total = calculateTotalAmount()
-              const details = { producerEmail: formData.producerEmail, billTo: formData.billTo, documentType: formData.documentType, receiptType: formData.receiptType, projectCode: formData.projectCode, amountRows: formData.amountRows, total }
+              const details = { producerEmail: formData.producerEmail, billTo: formData.billTo, documentType: formData.documentType, receiptType: formData.receiptType, projectCode: formData.projectCode, projectTitle: formData.projectTitle, amountRows: formData.amountRows, total }
               localStorage.setItem('submission_details', JSON.stringify(details))
               localStorage.setItem('current_document_type', formData.documentType)
               setSubmitting(true)
               try { 
-                await axios.post('/drafts/step1', { producerEmail: formData.producerEmail, billTo: formData.billTo, documentType: formData.documentType, receiptType: formData.receiptType, projectCode: formData.projectCode, total, amountRows: formData.amountRows }) 
+                await axios.post('/drafts/step1', { producerEmail: formData.producerEmail, billTo: formData.billTo, documentType: formData.documentType, receiptType: formData.receiptType, projectCode: formData.projectCode, projectTitle: formData.projectTitle, total, amountRows: formData.amountRows }) 
                 router.visit('/document-upload') 
               } catch(e) {
                 const msg = e?.response?.data?.message

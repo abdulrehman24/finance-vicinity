@@ -3,12 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Submission Rejected</title>
+    <title>Submission Approved</title>
     <style>
       @media only screen and (max-width: 600px) {
         .container { width: 100% !important; }
         .p-24 { padding: 16px !important; }
         .card { padding: 12px !important; }
+        .table th, .table td { padding: 8px !important; }
       }
     </style>
   </head>
@@ -27,13 +28,13 @@
                     <td>
                       <div style="color:#ebc1b6;">
                         <div style="font-size:18px; font-weight:bold;">Vicinity</div>
-                        <div style="font-size:12px; opacity:0.8;">Submission Update</div>
+                        <div style="font-size:12px; opacity:0.8;">Submission Approved</div>
                       </div>
                     </td>
                   </tr>
                 </table>
-                <h1 style="margin:12px 0 0; font-size:22px; line-height:1.3; color:#ebc1b6;">Your Submission Was Rejected</h1>
-                <p style="margin:8px 0 0; color:#ebc1b6; opacity:0.8;">Reviewed by {{ ucfirst($role) }}.</p>
+                <h1 style="margin:12px 0 0; font-size:22px; line-height:1.3; color:#ebc1b6;">Your Submission Has Been Approved</h1>
+                <p style="margin:8px 0 0; color:#ebc1b6; opacity:0.8;">Reviewed by Finance.</p>
                 <div style="margin-top:12px; background:#0b1220; border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:12px;">
                   <p style="margin:0; font-size:13px; color:#e5e7eb;"><strong style="color:#ebc1b6;">Payment Notification</strong> — You will be notified of payments via email from our bank when funds are transferred to your account. Payments will be made within 30-60 days.</p>
                 </div>
@@ -42,11 +43,6 @@
             <tr>
               <td class="p-24" style="padding:24px; color:#e5e7eb;">
                 <div class="card" style="background:#0b1220; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:16px;">
-                  <p style="margin:0 0 8px; font-weight:bold; color:#ffffff;">Reason Provided</p>
-                  <div style="background:#0b1220; border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:12px; color:#e5e7eb; white-space:pre-wrap;">{{ $reason }}</div>
-                </div>
-
-                <div class="card" style="margin-top:16px; background:#0b1220; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:16px;">
                   <p style="margin:0 0 8px; font-weight:bold; color:#ffffff;">Submission Details</p>
                   <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                     <tr>
@@ -81,16 +77,6 @@
                       <td style="padding:6px 0; color:#9ca3af;">Total Amount</td>
                       <td style="padding:6px 0; color:#ffffff;" align="right">{{ number_format((float)($submission->total_amount ?? 0), 2) }}</td>
                     </tr>
-                    <tr>
-                      <td style="padding:6px 0; color:#9ca3af;">Download Submitted PDF</td>
-                      <td style="padding:6px 0; color:#ffffff;" align="right">
-                        @if(!empty($submission->combined_invoice_pdf))
-                          <a href="{{ url(\Illuminate\Support\Facades\Storage::url($submission->combined_invoice_pdf)) }}" style="color:#a7f3d0; text-decoration:none;" target="_blank">Download PDF</a>
-                        @else
-                          -
-                        @endif
-                      </td>
-                    </tr>
                   </table>
                 </div>
               </td>
@@ -103,4 +89,5 @@
       </tr>
     </table>
   </body>
-  </html>
+</html>
+

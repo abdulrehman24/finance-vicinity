@@ -15,23 +15,57 @@ class PdfInvoiceVerificationService
     public function verify(SubmissionDraft $draft): array
     {
         $files = is_array($draft->files) ? $draft->files : [];
-        $expected = (float) ($draft->total_amount ?? 0);
         $expectedBillTo = (string) ($draft->bill_to ?? '');
-
-        $pdfMeta = $this->findInvoicePdf($files);
-
-        if (!$pdfMeta || !($pdfMeta['path'] ?? null)) {
-            return ['verified' => false, 'amountFound' => false];
+        $rows = is_array($draft->amount_rows) ? $draft->amount_rows : [];
+        $amounts = [];
+        foreach ($rows as $r) {
+            $v = (float) ($r['amount'] ?? 0);
+            if ($v > 0) { $amounts[] = $v; }
         }
-
-        $fullPath = Storage::disk('public')->path($pdfMeta['path']);
-
-        $data = $this->analyzePdfWithChatGpt($fullPath, $expected, $expectedBillTo);
-
-        $found = (bool) ($data['amountFound'] ?? false);
-        $billToMatched = (bool) ($data['billToMatched'] ?? false);
-
-        return ['verified' => $found, 'amountFound' => $found, 'billToMatched' => $billToMatched];
+        if (empty($amounts)) {
+            $t = (float) ($draft->total_amount ?? 0);
+            if ($t > 0) { $amounts[] = $t; }
+        }
+        $pdfs = [];
+        foreach ($files as $idx => $f) {
+            $type = (string) ($f['type'] ?? '');
+            $path = (string) ($f['path'] ?? '');
+            $name = (string) ($f['name'] ?? '');
+            $isPdf = stripos($type, 'pdf') !== false || preg_match('/\.pdf$/i', $path) || preg_match('/\.pdf$/i', $name);
+            if ($isPdf && $path) { $pdfs[] = $f; }
+        }
+        if (count($pdfs) === 0 || count($amounts) === 0) {
+            return ['verified' => false, 'amountFound' => false, 'billToMatched' => false];
+        }
+        $unique = [];
+        foreach ($amounts as $a) { $unique[(string)$a] = false; }
+        $billToAny = false;
+        $details = [];
+        foreach ($pdfs as $f) {
+            $fullPath = Storage::disk('public')->path((string)$f['path']);
+            $res = $this->analyzePdfForAmounts($fullPath, array_values(array_map('floatval', array_keys($unique))), $expectedBillTo);
+            $matches = is_array($res['matches'] ?? null) ? $res['matches'] : [];
+            $matchedAmounts = [];
+            $missingAmounts = [];
+            foreach ($matches as $m) {
+                $amt = (string) (isset($m['amount']) ? (float) $m['amount'] : 0);
+                $found = (bool) ($m['found'] ?? false) || (bool) ($m['finalTotal'] ?? false);
+                if (array_key_exists($amt, $unique) && $found) { $unique[$amt] = true; }
+                if ($found) { $matchedAmounts[] = (float)$amt; } else { $missingAmounts[] = (float)$amt; }
+            }
+            $billToAny = $billToAny || (bool) ($res['billToMatched'] ?? false);
+            $details[] = [
+                'name' => (string)($f['name'] ?? ''),
+                'assignedType' => (string)($f['assignedType'] ?? ''),
+                'url' => (string)($f['url'] ?? ''),
+                'matches' => $matches,
+                'matchedAmounts' => $matchedAmounts,
+                'missingAmounts' => $missingAmounts,
+            ];
+        }
+        $allFound = true;
+        foreach ($unique as $ok) { if (!$ok) { $allFound = false; break; } }
+        return ['verified' => $allFound, 'amountFound' => $allFound, 'billToMatched' => $billToAny, 'details' => $details];
     }
 
     /**
@@ -119,6 +153,38 @@ Do NOT include any extra text outside the JSON.
             return $parsed;
         }
         return ['amountFound' => false, 'billToMatched' => false];
+    }
+
+    private function analyzePdfForAmounts(string $pdfPath, array $amounts, string $expectedBillTo): array
+    {
+        $parser = new Parser();
+        $pdf = $parser->parseFile($pdfPath);
+        $text = $pdf->getText();
+        $list = json_encode(array_values(array_map('floatval', $amounts)));
+        $prompt = "\nYou are analyzing a financial document.\nExpected Bill To: {$expectedBillTo}.\n\nText of the document:\n\"\"\"{$text}\"\"\"\n\nGiven this JSON array of amounts: {$list}\nFor each amount, indicate if it appears anywhere in the document and whether it appears as the FINAL TOTAL.\nRespond ONLY in strict JSON:\n{\n  \"matches\": [{\"amount\": number, \"found\": true|false, \"finalTotal\": true|false}],\n  \"billToMatched\": true|false\n}\n";
+        $payload = [
+            'model' => 'gpt-4o-mini',
+            'input' => [
+                [
+                    'role' => 'user',
+                    'content' => $prompt,
+                ],
+            ],
+            'text' => [
+                'format' => [
+                    'type' => 'json_object',
+                ],
+            ],
+        ];
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . config('services.chatgpt.key'),
+            'Content-Type' => 'application/json',
+        ])->post('https://api.openai.com/v1/responses', $payload);
+        $body = $response->json();
+        $text = $body['output'][0]['content'][0]['text'] ?? '';
+        $parsed = $this->tryParseJson($text);
+        if (is_array($parsed)) { return $parsed; }
+        return ['matches' => [], 'billToMatched' => false];
     }
 
     /**
