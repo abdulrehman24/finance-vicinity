@@ -11,8 +11,7 @@ use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Storage;
 use App\Mail\SubmissionNotification;
 use Yajra\DataTables\Facades\DataTables;
-use Spatie\PdfToText\Pdf;
-use Smalot\PdfParser\Parser;
+use App\Services\PdfInvoiceVerificationService;
 
 class SubmissionDraftController extends Controller
 {
@@ -137,119 +136,13 @@ class SubmissionDraftController extends Controller
     {
         $email = $this->email($request);
         $draft = SubmissionDraft::firstOrCreate(['user_email' => $email, 'status' => 'draft']);
-        $files = is_array($draft->files) ? $draft->files : [];
-        $expected = (float) ($draft->total_amount ?? 0);
-        $expectedAmounts = [];
-        $rows = is_array($draft->amount_rows) ? $draft->amount_rows : [];
-        $billTo = (string) ($draft->bill_to ?? '');
-        $billToNorm = $this->normalizeText($billTo);
-        
-        foreach ($rows as $r) {
-            $amt = isset($r['amount']) ? (float) str_replace(',', '', $r['amount']) : null;
-            if ($amt && $amt > 0) { $expectedAmounts[] = $amt; }
-        }
-        $results = [];
-        $allCandidates = [];
-        $invoicePdfCount = 0;
-        $billToMatches = 0;
-        foreach ($files as $idx => $file) {
-            $path = $file['path'] ?? null;
-            if (!$path) { continue; }
-            $full = Storage::disk('public')->path($path);
-            if (!is_file($full)) { continue; }
-            $type = (string) ($file['type'] ?? '');
-            $isPdf = stripos($type, 'pdf') !== false || preg_match('/\.pdf$/i', $full);
-            if (!$isPdf) { continue; }
-            $text = '';
-            try { $text = Pdf::getText($full); } catch (\Throwable $e) {
-                try { $parser = new Parser(); $pdf = $parser->parseFile($full); $text = (string) $pdf->getText(); } catch (\Throwable $e2) { $text = ''; }
-            }
-            $invoicePdfCount++;
-            $textNorm = $this->normalizeText($text);
-            $candidates = $this->extractAmountsFromText($text);
-            $matched = false; $matchValue = null;
-            if ($expectedAmounts) {
-                foreach ($candidates as $val) { foreach ($expectedAmounts as $ea) { if (abs($val - $ea) < 0.01) { $matched = true; $matchValue = $val; break 2; } } }
-            } else {
-                foreach ($candidates as $val) { if (abs($val - $expected) < 0.01) { $matched = true; $matchValue = $val; break; } }
-            }
-            $billToMatched = false;
-            if ($billToNorm !== '') {
-                $billToMatched = $this->containsNormalizedFuzzy($textNorm, $billToNorm);
-                if (!$billToMatched) {
-                    $billToMatched = $this->containsNormalizedFuzzy($textNorm, $this->normalizeText('bill to'));
-                }
-            }
-            if ($billToMatched) { $billToMatches++; }
-            $results[] = [
-                'index' => $idx,
-                'name' => $file['name'] ?? basename($full),
-                'assignedType' => $file['assignedType'] ?? null,
-                'foundAmounts' => array_values($candidates),
-                'matched' => $matched,
-                'matchValue' => $matchValue,
-                'billToMatched' => $billToMatched,
-            ];
-            foreach ($candidates as $val) { $allCandidates[] = $val; }
-        }
-        
-        $matchedAmounts = [];
-        if ($expectedAmounts) {
-            foreach ($expectedAmounts as $ea) {
-                $found = false;
-                foreach ($allCandidates as $val) { if (abs($val - $ea) < 0.01) { $found = true; break; } }
-                if ($found) { $matchedAmounts[] = $ea; }
-            }
-            $verified = count($matchedAmounts) === count($expectedAmounts) && count($expectedAmounts) > 0;
-        } else {
-            $verified = $expected > 0 && collect($allCandidates)->contains(function($val) use ($expected){ return abs($val - $expected) < 0.01; });
-        }
-        $billToVerified = true;
-        if ($billToNorm !== '' && $invoicePdfCount > 0) { $billToVerified = ($billToMatches >= 1); }
-        $verified = $verified && $billToVerified;
+        $service = new PdfInvoiceVerificationService();
+        $result = $service->verify($draft);
         $draft->current_step = 3;
         $draft->save();
-        return response()->json([
-            'success' => true,
-            'id' => $draft->id,
-            'expected' => $expected,
-            'expectedAmounts' => $expectedAmounts,
-            'matchedAmounts' => $matchedAmounts,
-            'results' => $results,
-            'verified' => $verified,
-            'billToVerified' => $billToVerified,
-            'billTo' => $billTo,
-        ]);
+        return response()->json(array_merge(['success' => true, 'id' => $draft->id], $result));
     }
 
-    private function extractAmountsFromText(string $text): array
-    {
-        $lines = preg_split('/\r\n|\n|\r/', $text);
-        $labelNumbers = [];
-        $allNumbers = [];
-        foreach ($lines as $line) {
-            $lower = strtolower($line);
-            $hasLabel = (strpos($lower, 'total') !== false) || (strpos($lower, 'amount due') !== false) || (strpos($lower, 'balance due') !== false) || (strpos($lower, 'grand total') !== false) || (strpos($lower, 'invoice total') !== false) || (strpos($lower, 'amount payable') !== false);
-            
-            $line = is_string($line) ? $line : '';
-            $line = @iconv('UTF-8', 'UTF-8//IGNORE', $line);
-            $line = (string) $line;
-            $line = str_replace(["\xC2\xA0","\xE2\x80\xAF","\xE2\x80\x89","\xE2\x80\x8A","\xE2\x80\x88"], ' ', $line);
-            $line = str_replace("\xEF\xBC\x84", '$', $line);
-            $line = preg_replace('/(?<=\d)(?:\xC2\xA0|\xE2\x80\xAF|\xE2\x80\x89|\xE2\x80\x8A|\xE2\x80\x88)(?=\d)/', '', $line);
-            preg_match_all('/(?:s\s*\$|sgd|myr|usd)?\s*\$?\s*(-?\d{1,3}(?:,\d{3})*(?:\.\d{0,2})|-?\d+(?:\.\d{0,2})?)/i', $line, $m);
-            if (!empty($m[1])) {
-                foreach ($m[1] as $raw) {
-                    $val = (float) str_replace(',', '', $raw);
-                    if ($hasLabel) { $labelNumbers[] = $val; }
-                    $allNumbers[] = $val;
-                }
-            }
-        }
-        $labelNumbers = array_values(array_unique($labelNumbers));
-        $allNumbers = array_values(array_unique($allNumbers));
-        return array_values(array_unique(array_merge($labelNumbers, $allNumbers)));
-    }
 
     public function submit(Request $request)
     {
@@ -265,7 +158,8 @@ class SubmissionDraftController extends Controller
         }
         $draft->total_amount = $request->input('total');
         $draft->current_step = 4;
-        $check = $this->verifyAmountsAgainstUploaded($draft);
+        $service = new PdfInvoiceVerificationService();
+        $check = $service->verify($draft);
         if (!$check['verified']) {
             $msg = 'Entered total does not match amounts in uploaded PDFs';
             if (isset($check['billToVerified']) && !$check['billToVerified']) { $msg = 'Bill To company does not match in uploaded invoices'; }
@@ -367,115 +261,6 @@ class SubmissionDraftController extends Controller
         return null;
     }
 
-    private function normalizeText(string $s): string
-    {
-        $s = strtolower($s);
-        $s = preg_replace('/[^a-z0-9]+/i', ' ', $s);
-        $s = preg_replace('/\s+/', ' ', $s);
-        return trim((string)$s);
-    }
-
-    private function containsNormalized(string $haystackNorm, string $needleNorm): bool
-    {
-        if ($needleNorm === '') { return true; }
-        return strpos($haystackNorm, $needleNorm) !== false;
-    }
-
-    private function containsNormalizedFuzzy(string $haystackNorm, string $needleNorm): bool
-    {
-        if ($needleNorm === '') { return true; }
-        if (strpos($haystackNorm, $needleNorm) !== false) { return true; }
-        $tokens = preg_split('/\s+/', $needleNorm);
-        if (count($tokens) > 1) {
-            $parts = array_map(function($t){ return preg_quote($t, '/'); }, $tokens);
-            $pattern = '/'.implode('\\s*', $parts).'/i';
-            if (preg_match($pattern, $haystackNorm)) { return true; }
-        }
-        $hs = str_replace(' ', '', $haystackNorm);
-        $ns = str_replace(' ', '', $needleNorm);
-        return strpos($hs, $ns) !== false;
-    }
-
-    private function verifyAmountsAgainstUploaded(SubmissionDraft $draft): array
-    {
-        $files = is_array($draft->files) ? $draft->files : [];
-        $expected = (float) ($draft->total_amount ?? 0);
-        $expectedAmounts = [];
-        $rows = is_array($draft->amount_rows) ? $draft->amount_rows : [];
-        $billTo = (string) ($draft->bill_to ?? '');
-        $billToNorm = $this->normalizeText($billTo);
-        foreach ($rows as $r) {
-            $amt = isset($r['amount']) ? (float) str_replace(',', '', $r['amount']) : null;
-            if ($amt && $amt > 0) { $expectedAmounts[] = $amt; }
-        }
-        $results = [];
-        $allCandidates = [];
-        $invoicePdfCount = 0;
-        $billToMatches = 0;
-        foreach ($files as $idx => $file) {
-            $path = $file['path'] ?? null;
-            if (!$path) { continue; }
-            $full = \Illuminate\Support\Facades\Storage::disk('public')->path($path);
-            if (!is_file($full)) { continue; }
-            $type = (string) ($file['type'] ?? '');
-            $isPdf = stripos($type, 'pdf') !== false || preg_match('/\.pdf$/i', $full);
-            if (!$isPdf) { continue; }
-            $text = '';
-            try { $text = \Spatie\PdfToText\Pdf::getText($full); } catch (\Throwable $e) {
-                try { $parser = new \Smalot\PdfParser\Parser(); $pdf = $parser->parseFile($full); $text = (string) $pdf->getText(); } catch (\Throwable $e2) { $text = ''; }
-            }
-            $invoicePdfCount++;
-            $textNorm = $this->normalizeText($text);
-            $candidates = $this->extractAmountsFromText($text);
-            $matched = false; $matchValue = null;
-            if ($expectedAmounts) {
-                foreach ($candidates as $val) { foreach ($expectedAmounts as $ea) { if (abs($val - $ea) < 0.01) { $matched = true; $matchValue = $val; break 2; } } }
-            } else {
-                foreach ($candidates as $val) { if (abs($val - $expected) < 0.01) { $matched = true; $matchValue = $val; break; } }
-            }
-            $billToMatched = false;
-            if ($billToNorm !== '') {
-                $billToMatched = $this->containsNormalized($textNorm, $billToNorm);
-                if (!$billToMatched) {
-                    $billToMatched = $this->containsNormalized($textNorm, $this->normalizeText('bill to'));
-                }
-            }
-            if ($billToMatched) { $billToMatches++; }
-            $results[] = [
-                'index' => $idx,
-                'name' => $file['name'] ?? basename($full),
-                'assignedType' => $file['assignedType'] ?? null,
-                'foundAmounts' => array_values($candidates),
-                'matched' => $matched,
-                'matchValue' => $matchValue,
-                'billToMatched' => $billToMatched,
-            ];
-            foreach ($candidates as $val) { $allCandidates[] = $val; }
-        }
-        $matchedAmounts = [];
-        if ($expectedAmounts) {
-            foreach ($expectedAmounts as $ea) {
-                $found = false;
-                foreach ($allCandidates as $val) { if (abs($val - $ea) < 0.01) { $found = true; break; } }
-                if ($found) { $matchedAmounts[] = $ea; }
-            }
-            $verifiedAmounts = count($matchedAmounts) === count($expectedAmounts) && count($expectedAmounts) > 0;
-        } else {
-            $verifiedAmounts = $expected > 0 && collect($allCandidates)->contains(function($val) use ($expected){ return abs($val - $expected) < 0.01; });
-        }
-        $billToVerified = true;
-        if ($billToNorm !== '' && $invoicePdfCount > 0) { $billToVerified = ($billToMatches >= 1); }
-        $overallVerified = $verifiedAmounts && $billToVerified;
-        return [
-            'verified' => $overallVerified,
-            'results' => $results,
-            'expected' => $expected,
-            'expectedAmounts' => $expectedAmounts,
-            'matchedAmounts' => $matchedAmounts,
-            'billToVerified' => $billToVerified,
-            'billTo' => $billTo,
-        ];
-    }
 
     public function accept(Request $request, SubmissionDraft $submission)
     {

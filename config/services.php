@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'chatgpt' => [
+        'key' => env('CHATGPT_API_KEY'),
+        'model' => env('CHATGPT_MODEL', 'gpt-4o-mini'),
+        'endpoint' => env('CHATGPT_ENDPOINT', 'https://api.openai.com/v1/chat/completions'),
+    ],
+
 ];
