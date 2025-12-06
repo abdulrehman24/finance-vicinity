@@ -10,6 +10,8 @@ export default function DocumentUpload() {
   const [selectedDocType, setSelectedDocType] = React.useState('')
   const [editingFileId, setEditingFileId] = React.useState(null)
   const [replaceFiles, setReplaceFiles] = React.useState(true)
+  const [uploading, setUploading] = React.useState(false)
+  const [uploadProgress, setUploadProgress] = React.useState(0)
   const currentType = typeof window !== 'undefined' ? localStorage.getItem('current_document_type') || 'invoice' : 'invoice'
 
   function inferTypeFromName(name) {
@@ -20,7 +22,7 @@ export default function DocumentUpload() {
     return selectedDocType || currentType
   }
 
-  const onDrop = React.useCallback((acceptedFiles) => {
+  const onDrop = React.useCallback(async (acceptedFiles) => {
     const newFiles = acceptedFiles.map(file => ({
       id: Date.now() + Math.random(),
       file,
@@ -34,18 +36,35 @@ export default function DocumentUpload() {
     setUploadedFiles(prev => {
       const next = replaceFiles ? newFiles : [...prev, ...newFiles]
       persistUploads(next)
-      try {
-        const form = new FormData()
-        newFiles.forEach(f => {
-          form.append('files[]', f.file)
-          form.append('assignedTypes[]', f.assignedType)
-          form.append('ocr[]', f.ocr ? '1' : '0')
-        })
-        form.append('replace', replaceFiles ? '1' : '0')
-        axios.post('/drafts/files', form, { headers: { 'Content-Type': 'multipart/form-data' } })
-      } catch(e){}
       return next
     })
+    try {
+      const form = new FormData()
+      newFiles.forEach(f => {
+        form.append('files[]', f.file)
+        form.append('assignedTypes[]', f.assignedType)
+        form.append('ocr[]', f.ocr ? '1' : '0')
+      })
+      form.append('replace', replaceFiles ? '1' : '0')
+      setUploading(true)
+      setUploadProgress(0)
+      await axios.post('/drafts/files', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (e) => {
+          try {
+            const total = e.total || e.loaded || 0
+            if (total > 0) {
+              const pct = Math.min(100, Math.round((e.loaded / total) * 100))
+              setUploadProgress(pct)
+            }
+          } catch(_) {}
+        }
+      })
+    } catch(e) {
+    } finally {
+      setUploading(false)
+      setUploadProgress(0)
+    }
   }, [selectedDocType, currentType, replaceFiles])
 
   React.useEffect(() => {
@@ -252,6 +271,17 @@ export default function DocumentUpload() {
             <h3 className="text-lg font-medium text-vicinity-text">Upload Documents</h3>
             <p className="text-vicinity-text/60">Drag & drop files here, or click to select files</p>
             <p className="text-sm text-vicinity-text/40 mt-2">Supports PDF and images only (max 10MB each)</p>
+            {uploading && (
+              <div className="mt-4 text-left">
+                <div className="flex items-center justify-between text-xs text-vicinity-text/70 mb-1">
+                  <span>Uploading…</span>
+                  <span>{uploadProgress}%</span>
+                </div>
+                <div className="h-2 w-full bg-[#3d4b56] rounded-full">
+                  <div className="h-2 bg-vicinity-text rounded-full" style={{ width: `${uploadProgress}%` }} />
+                </div>
+              </div>
+            )}
           </div>
 
           {uploadedFiles.length > 0 && (
@@ -360,10 +390,10 @@ export default function DocumentUpload() {
 
           <div className="flex items-center justify-between">
             <button onClick={()=>router.visit('/submit')} className="px-4 py-3 border border-vicinity-text/20 rounded-lg text-vicinity-text font-medium hover:bg-vicinity-hover/20">Back</button>
-            <button disabled={!areRequirementsMet()} onClick={()=>{
+            <button disabled={uploading || !areRequirementsMet()} onClick={()=>{
               localStorage.setItem('vicinity_uploaded_files', JSON.stringify(uploadedFiles.map(f => ({ name: f.name, size: f.size, type: f.type, assignedType: f.assignedType, ocr: !!f.ocr }))))
               router.visit('/ocr')
-            }} className={`bg-vicinity-text text-vicinity-bg py-3 px-4 rounded-lg font-bold hover:bg-white ${!areRequirementsMet() ? 'opacity-50 cursor-not-allowed' : ''}`}>Continue to OCR Verification</button>
+            }} className={`bg-vicinity-text text-vicinity-bg py-3 px-4 rounded-lg font-bold hover:bg-white ${(uploading || !areRequirementsMet()) ? 'opacity-50 cursor-not-allowed' : ''}`}>Continue to OCR Verification</button>
           </div>
         </div>
       </div>
