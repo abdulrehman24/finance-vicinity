@@ -29,20 +29,22 @@ export default function DocumentUpload() {
       type: file.type,
       assignedType: inferTypeFromName(file.name),
       preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
+      ocr: true,
     }))
     setUploadedFiles(prev => {
-      const merged = [...prev, ...newFiles]
-      persistUploads(merged)
+      const next = replaceFiles ? newFiles : [...prev, ...newFiles]
+      persistUploads(next)
       try {
         const form = new FormData()
         newFiles.forEach(f => {
           form.append('files[]', f.file)
           form.append('assignedTypes[]', f.assignedType)
+          form.append('ocr[]', f.ocr ? '1' : '0')
         })
         form.append('replace', replaceFiles ? '1' : '0')
         axios.post('/drafts/files', form, { headers: { 'Content-Type': 'multipart/form-data' } })
       } catch(e){}
-      return merged
+      return next
     })
   }, [selectedDocType, currentType, replaceFiles])
 
@@ -60,6 +62,7 @@ export default function DocumentUpload() {
             type: f.type,
             assignedType: f.assignedType,
             preview: null,
+            ocr: typeof f.ocr === 'boolean' ? f.ocr : true,
           }))
           setUploadedFiles(existing)
         }
@@ -73,6 +76,12 @@ export default function DocumentUpload() {
     maxSize: 10 * 1024 * 1024,
   })
 
+  const clearUploads = React.useCallback(() => {
+    setUploadedFiles([])
+    persistUploads([])
+    try { axios.post('/drafts/files', { files: [] }) } catch(e){}
+  }, [])
+
   function formatFileSize(bytes) {
     if (bytes === 0) return '0 Bytes'
     const k = 1024
@@ -85,7 +94,7 @@ export default function DocumentUpload() {
     setUploadedFiles(prev => {
       const filtered = prev.filter(f => f.id !== id)
       persistUploads(filtered)
-      try { axios.post('/drafts/files', { files: filtered.map(f => ({ name: f.name, size: f.size, type: f.type, assignedType: f.assignedType })) }) } catch(e){}
+      try { axios.post('/drafts/files', { files: filtered.map(f => ({ name: f.name, size: f.size, type: f.type, assignedType: f.assignedType, ocr: !!f.ocr })) }) } catch(e){}
       return filtered
     })
   }
@@ -224,9 +233,14 @@ export default function DocumentUpload() {
             <h4 className="font-medium text-vicinity-text">Optional Documents</h4>
           </div>
           <p className="text-sm text-vicinity-text/60">You can also upload supporting documents like receipts, correspondence, certificates, etc.</p>
-          <div className="mt-3 flex items-center space-x-2">
-            <input type="checkbox" checked={replaceFiles} onChange={(e)=>setReplaceFiles(e.target.checked)} className="w-4 h-4 rounded border border-vicinity-text/20 bg-vicinity-input" />
-            <span className="text-sm text-vicinity-text/60">Replace previous files on upload</span>
+          <div className="mt-3">
+            <label className="flex items-center space-x-2 relative">
+              <input type="checkbox" checked={replaceFiles} onChange={(e)=>setReplaceFiles(e.target.checked)} className="peer appearance-none w-5 h-5 rounded-full border border-[#3d4b56] bg-[#3d4b56] checked:bg-[#3d4b56] checked:border-[#3d4b56] focus:ring-2 focus:ring-vicinity-text/40 transition-colors" />
+              <span className="pointer-events-none absolute left-0 top-0 w-5 h-5 flex items-center justify-center opacity-0 peer-checked:opacity-100">
+                <FiCheck className="w-4 h-4 text-white" />
+              </span>
+              <span className="text-sm text-vicinity-text/60">Replace previous files on upload</span>
+            </label>
           </div>
         </div>
 
@@ -272,7 +286,7 @@ export default function DocumentUpload() {
                                   setUploadedFiles(prev => {
                                     const updated = prev.map(f => f.id === fileItem.id ? { ...f, assignedType: val } : f)
                                     persistUploads(updated)
-                                    try { axios.post('/drafts/files', { files: updated.map(f => ({ name: f.name, size: f.size, type: f.type, assignedType: f.assignedType })) }) } catch(e){}
+                                    try { axios.post('/drafts/files', { files: updated.map(f => ({ name: f.name, size: f.size, type: f.type, assignedType: f.assignedType, ocr: !!f.ocr })) }) } catch(e){}
                                     return updated
                                   })
                                   setEditingFileId(null)
@@ -285,6 +299,21 @@ export default function DocumentUpload() {
                                 <div className="flex items-center space-x-2">
                                   <span className="px-2 py-1 bg-vicinity-text/10 rounded text-xs text-vicinity-text border border-vicinity-text/20">{getDocumentTypeLabel(fileItem.assignedType)}</span>
                                   <button onClick={()=>setEditingFileId(fileItem.id)} className="text-vicinity-text/60 hover:text-vicinity-text p-1"><FiEdit2 className="w-3 h-3" /></button>
+                                  <label className="relative flex items-center space-x-1 text-xs text-vicinity-text/70">
+                                    <input type="checkbox" checked={!!fileItem.ocr} onChange={(e)=>{
+                                      const checked = e.target.checked
+                                      setUploadedFiles(prev => {
+                                        const updated = prev.map(f => f.id === fileItem.id ? { ...f, ocr: checked } : f)
+                                        persistUploads(updated)
+                                        try { axios.post('/drafts/files', { files: updated.map(f => ({ name: f.name, size: f.size, type: f.type, assignedType: f.assignedType, ocr: !!f.ocr })) }) } catch(e){}
+                                        return updated
+                                      })
+                                    }} className="peer appearance-none w-5 h-5 rounded-full border border-[#3d4b56] bg-[#3d4b56] checked:bg-[#3d4b56] checked:border-[#3d4b56] focus:ring-2 focus:ring-vicinity-text/40 transition-colors" />
+                                    <span className="pointer-events-none absolute left-0 top-0 w-5 h-5 flex items-center justify-center opacity-0 peer-checked:opacity-100">
+                                      <FiCheck className="w-4 h-4 text-white" />
+                                    </span>
+                                    <span>Run OCR</span>
+                                  </label>
                                 </div>
                               )}
                             </div>
@@ -332,7 +361,7 @@ export default function DocumentUpload() {
           <div className="flex items-center justify-between">
             <button onClick={()=>router.visit('/submit')} className="px-4 py-3 border border-vicinity-text/20 rounded-lg text-vicinity-text font-medium hover:bg-vicinity-hover/20">Back</button>
             <button disabled={!areRequirementsMet()} onClick={()=>{
-              localStorage.setItem('vicinity_uploaded_files', JSON.stringify(uploadedFiles.map(f => ({ name: f.name, size: f.size, type: f.type, assignedType: f.assignedType }))))
+              localStorage.setItem('vicinity_uploaded_files', JSON.stringify(uploadedFiles.map(f => ({ name: f.name, size: f.size, type: f.type, assignedType: f.assignedType, ocr: !!f.ocr }))))
               router.visit('/ocr')
             }} className={`bg-vicinity-text text-vicinity-bg py-3 px-4 rounded-lg font-bold hover:bg-white ${!areRequirementsMet() ? 'opacity-50 cursor-not-allowed' : ''}`}>Continue to OCR Verification</button>
           </div>
@@ -342,13 +371,9 @@ export default function DocumentUpload() {
   )
 }
   function persistUploads(files) {
-    const payload = files.map(f => ({ name: f.name, size: f.size, type: f.type, assignedType: f.assignedType }))
+    const payload = files.map(f => ({ name: f.name, size: f.size, type: f.type, assignedType: f.assignedType, ocr: !!f.ocr }))
     if (typeof window !== 'undefined') {
       localStorage.setItem('vicinity_uploaded_files', JSON.stringify(payload))
     }
   }
-  function clearUploads() {
-    setUploadedFiles([])
-    persistUploads([])
-    try { axios.post('/drafts/files', { files: [] }) } catch(e){}
-  }
+  

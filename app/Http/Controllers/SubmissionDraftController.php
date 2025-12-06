@@ -78,6 +78,7 @@ class SubmissionDraftController extends Controller
         if ($request->hasFile('files')) {
             $request->validate(['files.*' => 'file|mimes:pdf,png,jpg,jpeg,gif,webp|max:51200']);
             $assigned = (array) $request->input('assignedTypes', []);
+            $ocrFlags = (array) $request->input('ocr', []);
             $replace = (bool) $request->boolean('replace');
             $dir = 'submissions/'.$draft->id;
             if ($replace) {
@@ -99,6 +100,7 @@ class SubmissionDraftController extends Controller
                     'size' => $file->getSize(),
                     'type' => $file->getMimeType(),
                     'assignedType' => $assigned[$idx] ?? null,
+                    'ocr' => $this->parseOcrFlag($ocrFlags[$idx] ?? null),
                     'path' => $path,
                     'url' => \Illuminate\Support\Facades\Storage::url($path),
                 ];
@@ -136,6 +138,7 @@ class SubmissionDraftController extends Controller
                     $ex['assignedType'] = $m['assignedType'] ?? ($ex['assignedType'] ?? null);
                     if (isset($m['type'])) { $ex['type'] = $m['type']; }
                     if (isset($m['size'])) { $ex['size'] = $m['size']; }
+                    if (array_key_exists('ocr', $m)) { $ex['ocr'] = $this->parseOcrFlag($m['ocr']); }
                     $updated[] = $ex;
                 } else {
                     $p = $ex['path'] ?? null;
@@ -148,6 +151,14 @@ class SubmissionDraftController extends Controller
         $draft->current_step = 2;
         $draft->save();
         return response()->json(['success' => true, 'id' => $draft->id, 'files' => $draft->files]);
+    }
+
+    private function parseOcrFlag($value): bool
+    {
+        if (is_bool($value)) return $value;
+        if (is_null($value)) return true; // default to true if not provided
+        $str = strtolower((string) $value);
+        return in_array($str, ['1','true','yes','on'], true);
     }
 
     public function ocr(Request $request)

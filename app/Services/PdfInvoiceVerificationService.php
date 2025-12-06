@@ -31,8 +31,9 @@ class PdfInvoiceVerificationService
             $type = (string) ($f['type'] ?? '');
             $path = (string) ($f['path'] ?? '');
             $name = (string) ($f['name'] ?? '');
+            $ocrEnabled = array_key_exists('ocr', (array)$f) ? (bool) ($f['ocr']) : true;
             $isPdf = stripos($type, 'pdf') !== false || preg_match('/\.pdf$/i', $path) || preg_match('/\.pdf$/i', $name);
-            if ($isPdf && $path) { $pdfs[] = $f; }
+            if ($ocrEnabled && $isPdf && $path) { $pdfs[] = $f; }
         }
         if (count($pdfs) === 0 || count($amounts) === 0) {
             return ['verified' => false, 'amountFound' => false, 'billToMatched' => false];
