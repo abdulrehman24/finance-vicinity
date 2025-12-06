@@ -295,8 +295,13 @@ class SubmissionDraftController extends Controller
         if ($submission->status !== 'pending') {
             return response('Invalid submission state', 422);
         }
-        $submission->accepted_by_producer = 'accepted';
-        $submission->save();
+        $updated = \App\Models\SubmissionDraft::where('id', $submission->id)
+            ->where(function($q){ $q->whereNull('accepted_by_producer')->orWhere('accepted_by_producer', '!=', 'accepted'); })
+            ->update(['accepted_by_producer' => 'accepted']);
+        if ($updated === 0) {
+            return response('Submission already accepted');
+        }
+        $submission->refresh();
 
         $financeAcceptUrl = URL::temporarySignedRoute('drafts.finance.accept', now()->addDays(7), ['submission' => $submission->id]);
         $financeRejectUrl = URL::temporarySignedRoute('drafts.finance.reject', now()->addDays(7), ['submission' => $submission->id]);

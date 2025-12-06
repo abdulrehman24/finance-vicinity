@@ -11,7 +11,7 @@ export default function Review() {
 
   const total = details?.total || 0
 
-  function submitForApproval() {
+  async function submitForApproval() {
     if (ocrStatus !== 'processed' && ocrStatus !== 'skipped') return
     const submission = {
       id: Date.now().toString(),
@@ -28,7 +28,9 @@ export default function Review() {
     const existing = JSON.parse(localStorage.getItem('vicinity_submissions') || '[]')
     existing.push(submission)
     localStorage.setItem('vicinity_submissions', JSON.stringify(existing))
-    try { axios.post('/drafts/submit', { total }) } catch(e){}
+    try {
+      await axios.post('/drafts/submit', { total })
+    } catch(e) {}
     router.visit('/finance-dashboard')
   }
 
