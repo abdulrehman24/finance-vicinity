@@ -49,6 +49,10 @@ class HandleInertiaRequests extends Middleware
                 'site_title' => $settings->site_title,
                 'faviconUrl' => $settings->faviconUrl(),
                 'favicon_url' => $settings->faviconUrl(),
+                'payment_notification_title' => $settings->payment_notification_title,
+                'payment_notification_text' => $settings->payment_notification_text,
+                'adminBackgroundUrl' => $settings->adminBackgroundUrl(),
+                'admin_background_url' => $settings->adminBackgroundUrl(),
             ],
         ];
     }

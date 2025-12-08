@@ -1,9 +1,14 @@
 import Header from '../Components/Header'
 import Footer from '../Components/Footer'
+import { usePage } from '@inertiajs/react'
 
 export default function AppLayout({ children }) {
+  const { props } = usePage()
+  const path = typeof window !== 'undefined' ? window.location.pathname : ''
+  const adminBg = props?.settings?.admin_background_url || props?.settings?.adminBackgroundUrl || ''
+  const useAdminBg = path === '/admin'
   return (
-    <div className="min-h-screen bg-vicinity-bg flex flex-col">
+    <div className="min-h-screen bg-vicinity-bg flex flex-col" style={useAdminBg && adminBg ? { backgroundImage: `linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)), url(${adminBg})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : undefined}>
       <Header />
       <main className="flex-1">{children}</main>
       <style>{`

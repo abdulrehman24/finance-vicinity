@@ -76,14 +76,14 @@ export default function OCRScanner() {
             <div className="mt-6">
               <div className={`p-3 rounded-lg border ${result.amountFound ? 'border-green-500/40 bg-green-900/20' : 'border-red-500/40 bg-red-900/20'}`}>
                 <div className="text-sm">
-                  <span className="font-medium">Match Status:</span>
-                  <span className="ml-1">{result.amountFound ? 'Expected amount found as FINAL TOTAL' : 'Expected amount not found as FINAL TOTAL'}</span>
+                  <span className="font-medium text-vicinity-text">Match Status:</span>
+                  <span className="ml-1 text-vicinity-text">{result.amountFound ? 'Expected amount found as FINAL TOTAL' : 'Expected amount not found as FINAL TOTAL'}</span>
                 </div>
               </div>
               <div className={`mt-3 p-3 rounded-lg border ${result.billToMatched ? 'border-green-500/40 bg-green-900/20' : 'border-yellow-500/40 bg-yellow-900/20'}`}>
                 <div className="text-sm">
-                  <span className="font-medium">Bill To Match:</span>
-                  <span className="ml-1">{result.billToMatched ? 'Expected Bill To matched' : 'Expected Bill To not matched'}</span>
+                  <span className="font-medium text-vicinity-text">Bill To Match:</span>
+                  <span className="ml-1 text-vicinity-text">{result.billToMatched ? 'Expected Bill To matched' : 'Expected Bill To not matched'}</span>
                 </div>
               </div>
               {Array.isArray(result.details) && result.details.length > 0 && (
@@ -126,9 +126,6 @@ export default function OCRScanner() {
           <div className="mt-6 flex items-center justify-between">
             <button onClick={()=>{ router.visit('/document-upload') }} className="px-4 py-3 border border-vicinity-text/20 rounded-lg text-vicinity-text font-medium hover:bg-vicinity-hover/20">Back to Upload</button>
             <div className="flex items-center space-x-3">
-              {!(result.amountFound && result.billToMatched) && (
-                <button onClick={()=>{ localStorage.setItem('vicinity_ocr_status', 'skipped'); router.visit('/review') }} className="px-4 py-3 border border-vicinity-text/20 rounded-lg text-vicinity-text font-medium hover:bg-vicinity-hover/20">Continue without OCR</button>
-              )}
               <button disabled={!(result.amountFound && result.billToMatched)} onClick={async ()=>{ if (!(result.amountFound && result.billToMatched)) return; localStorage.setItem('vicinity_ocr_status', 'processed'); router.visit('/review') }} className={`bg-vicinity-text text-vicinity-bg py-3 px-4 rounded-lg font-bold hover:bg-white ${!(result.amountFound && result.billToMatched) ? 'opacity-50 cursor-not-allowed' : ''}`}>Continue to Review</button>
             </div>
           </div>

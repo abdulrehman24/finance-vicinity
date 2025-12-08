@@ -424,6 +424,17 @@ class SubmissionDraftController extends Controller
     public function adminData(Request $request)
     {
         $query = SubmissionDraft::query()->where('status', '!=', 'draft');
+        $from = (string) $request->input('from', '');
+        $to = (string) $request->input('to', '');
+        if ($from !== '') {
+            $query->whereDate('created_at', '>=', $from);
+        }
+        if ($to !== '') {
+            $query->whereDate('created_at', '<=', $to);
+        }
+        $dir = strtolower((string) $request->input('dir', 'desc'));
+        if (!in_array($dir, ['asc','desc'])) { $dir = 'desc'; }
+        $query->orderBy('created_at', $dir);
         $val = (string) ($request->input('search.value') ?? '');
         if ($val !== '') {
             $query->where(function($q) use ($val){

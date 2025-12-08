@@ -252,7 +252,7 @@ export default function DocumentUpload() {
             <h4 className="font-medium text-vicinity-text">Optional Documents</h4>
           </div>
           <p className="text-sm text-vicinity-text/60">You can also upload supporting documents like receipts, correspondence, certificates, etc.</p>
-          <div className="mt-3">
+          {/* <div className="mt-3">
             <label className="flex items-center space-x-2 relative">
               <input type="checkbox" checked={replaceFiles} onChange={(e)=>setReplaceFiles(e.target.checked)} className="peer appearance-none w-5 h-5 rounded-full border border-[#3d4b56] bg-[#3d4b56] checked:bg-[#3d4b56] checked:border-[#3d4b56] focus:ring-2 focus:ring-vicinity-text/40 transition-colors" />
               <span className="pointer-events-none absolute left-0 top-0 w-5 h-5 flex items-center justify-center opacity-0 peer-checked:opacity-100">
@@ -260,7 +260,7 @@ export default function DocumentUpload() {
               </span>
               <span className="text-sm text-vicinity-text/60">Replace previous files on upload</span>
             </label>
-          </div>
+          </div> */}
         </div>
 
           <div {...getRootProps()} className={`border-2 border-dashed rounded-lg p-8 text-center ${isDragActive ? 'border-vicinity-text' : 'border-vicinity-text/30'} cursor-pointer transition-all`}>

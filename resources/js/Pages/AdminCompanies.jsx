@@ -17,6 +17,7 @@ export default function AdminCompanies(){
   const [editingId, setEditingId] = React.useState(null)
   const [editName, setEditName] = React.useState('')
   const [editStatus, setEditStatus] = React.useState('active')
+  const [dragId, setDragId] = React.useState(null)
 
   async function load(){
     setLoading(true)
@@ -31,6 +32,25 @@ export default function AdminCompanies(){
   }
 
   React.useEffect(()=>{ load() }, [draw, start, length, search])
+
+  function onDragStart(id){ setDragId(id) }
+  function onDragOver(e){ e.preventDefault() }
+  function onDrop(targetId){
+    if (!dragId || dragId === targetId) return
+    const idxFrom = rows.findIndex(r=>r.id===dragId)
+    const idxTo = rows.findIndex(r=>r.id===targetId)
+    if (idxFrom<0 || idxTo<0) return
+    const next = rows.slice()
+    const [moved] = next.splice(idxFrom, 1)
+    next.splice(idxTo, 0, moved)
+    setRows(next)
+  }
+
+  async function saveOrder(){
+    const ids = rows.map(r=>r.id)
+    try { await axios.post('/admin/companies/reorder', { ids }) } catch(e){}
+    setDraw(draw + 1)
+  }
 
   function startEdit(row){
     setEditingId(row.id)
@@ -84,9 +104,10 @@ export default function AdminCompanies(){
 
         <div className="bg-vicinity-card rounded-2xl shadow-xl border border-vicinity-text/10 overflow-hidden">
           <div className="overflow-auto max-h-[60vh] w-full bg-vicinity-card">
-            <table className="min-w-[700px] w-full bg-vicinity-card">
+            <table className="min-w-[800px] w-full bg-vicinity-card">
               <thead className="sticky top-0 z-10 bg-vicinity-text/10">
                 <tr>
+                  <th className="text-left px-4 py-3 whitespace-nowrap">Seq</th>
                   <th className="text-left px-4 py-3 whitespace-nowrap">ID</th>
                   <th className="text-left px-4 py-3 whitespace-nowrap">Name</th>
                   <th className="text-left px-4 py-3 whitespace-nowrap">Status</th>
@@ -100,7 +121,8 @@ export default function AdminCompanies(){
                 ) : rows.length === 0 ? (
                   <tr><td className="px-4 py-6 text-vicinity-text/60" colSpan={5}>No companies found</td></tr>
                 ) : rows.map(r => (
-                  <tr key={r.id} className="border-t border-vicinity-text/10">
+                  <tr key={r.id} className="border-t border-vicinity-text/10" draggable onDragStart={()=>onDragStart(r.id)} onDragOver={onDragOver} onDrop={()=>onDrop(r.id)}>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm">{r.sequence ?? '-'}</td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm">{r.id}</td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm">
                       {editingId === r.id ? (
@@ -138,6 +160,9 @@ export default function AdminCompanies(){
               </tbody>
             </table>
           </div>
+        </div>
+        <div className="flex items-center justify-end mt-3">
+          <button onClick={saveOrder} className="px-4 py-2 bg-vicinity-text text-vicinity-bg rounded-lg">Save Order</button>
         </div>
         <div className="flex items-center justify-between mt-4">
           <div className="text-sm text-vicinity-text/60">Showing {Math.min(recordsFiltered, start + 1)} to {Math.min(recordsFiltered, start + length)} of {recordsFiltered} entries</div>

@@ -80,6 +80,11 @@ Route::middleware(['admin'])->group(function () {
     Route::post('/admin/companies', [\App\Http\Controllers\CompanyController::class, 'store']);
     Route::put('/admin/companies/{company}', [\App\Http\Controllers\CompanyController::class, 'update']);
     Route::delete('/admin/companies/{company}', [\App\Http\Controllers\CompanyController::class, 'destroy']);
+    Route::post('/admin/companies/reorder', [\App\Http\Controllers\CompanyController::class, 'reorder']);
+    Route::get('/admin/admins', function () { return Inertia::render('AdminAdmins'); });
+    Route::get('/admin/admins/data', [\App\Http\Controllers\AdminUserController::class, 'data']);
+    Route::post('/admin/admins', [\App\Http\Controllers\AdminUserController::class, 'store']);
+    Route::delete('/admin/admins/{user}', [\App\Http\Controllers\AdminUserController::class, 'destroy']);
     Route::get('/admin/settings', [\App\Http\Controllers\SettingsController::class, 'show']);
     Route::post('/admin/settings', [\App\Http\Controllers\SettingsController::class, 'update']);
 });

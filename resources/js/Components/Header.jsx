@@ -9,33 +9,7 @@ export default function Header() {
   const sessionEmail = props?.auth?.email
   const isAdminRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')
   return (
-    <header className="bg-vicinity-card shadow-lg border-b border-vicinity-text/10">
-      {!isAdminRoute && (
-        <div className="relative w-full overflow-hidden bg-vicinity-text/10 border-b border-vicinity-text/20">
-          <div className="animate-marquee whitespace-nowrap py-2">
-            <span className="mx-6 text-sm text-vicinity-text/80">
-              Payment Notification — You will be notified of payments via email from our bank when funds are transferred to your account. Payments will be made within 30-60 days.
-            </span>
-            <span className="mx-6 text-sm text-vicinity-text/80">
-              Payment Notification — You will be notified of payments via email from our bank when funds are transferred to your account. Payments will be made within 30-60 days.
-            </span>
-            <span className="mx-6 text-sm text-vicinity-text/80">
-              Payment Notification — You will be notified of payments via email from our bank when funds are transferred to your account. Payments will be made within 30-60 days.
-            </span>
-          </div>
-          <style>{`
-            .animate-marquee {
-              display: inline-block;
-              min-width: 200%;
-              animation: marquee 18s linear infinite;
-            }
-            @keyframes marquee {
-              0% { transform: translateX(0%); }
-              100% { transform: translateX(-50%); }
-            }
-          `}</style>
-        </div>
-      )}
+    <header className="bg-vicinity-card shadow-lg border-b border-vicinity-text/10">   
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-3">

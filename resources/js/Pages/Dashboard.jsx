@@ -71,8 +71,8 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-vicinity-text mb-2">Payment Notification</h3>
-              <p className="text-vicinity-text/70">You will be notified of payments via email from our bank when funds are transferred to your account.</p>
+              <h3 className="font-semibold text-vicinity-text mb-2">{(props?.settings?.payment_notification_title) || 'Payment Notification'}</h3>
+              <p className="text-vicinity-text/70">{(props?.settings?.payment_notification_text) || 'You will be notified of payments via email from our bank when funds are transferred to your account.'}</p>
             </div>
           </div>
         </div>

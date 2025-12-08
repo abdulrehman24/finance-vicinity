@@ -20,6 +20,10 @@ class SettingsController extends Controller
                 'site_title' => $setting->site_title,
                 'favicon_url' => $setting->faviconUrl(),
                 'faviconUrl' => $setting->faviconUrl(),
+                'payment_notification_title' => $setting->payment_notification_title,
+                'payment_notification_text' => $setting->payment_notification_text,
+                'admin_background_url' => $setting->adminBackgroundUrl(),
+                'adminBackgroundUrl' => $setting->adminBackgroundUrl(),
             ],
         ]);
     }
@@ -31,6 +35,9 @@ class SettingsController extends Controller
             'site_title' => ['nullable','string','max:255'],
             'logo' => ['nullable','image','max:5120'],
             'favicon' => ['nullable','mimes:png,ico,svg,webp,jpg,jpeg','max:2048'],
+            'payment_notification_title' => ['nullable','string','max:255'],
+            'payment_notification_text' => ['nullable','string'],
+            'admin_background' => ['nullable','image','max:10240'],
         ]);
         $setting = Setting::current();
 
@@ -42,6 +49,16 @@ class SettingsController extends Controller
         $title = (string) $request->input('site_title', '');
         if ($title !== '') {
             $setting->site_title = $title;
+        }
+
+        $pnTitle = (string) $request->input('payment_notification_title', '');
+        if ($pnTitle !== '') {
+            $setting->payment_notification_title = $pnTitle;
+        }
+
+        $pnText = (string) $request->input('payment_notification_text', '');
+        if ($pnText !== '') {
+            $setting->payment_notification_text = $pnText;
         }
 
         if ($request->hasFile('logo')) {
@@ -62,6 +79,15 @@ class SettingsController extends Controller
             $setting->favicon_path = $path;
         }
 
+        if ($request->hasFile('admin_background')) {
+            $file = $request->file('admin_background');
+            $dir = 'backgrounds';
+            Storage::disk('public')->makeDirectory($dir);
+            $name = 'admin-bg-'.time().'-'.uniqid().'.'.$file->getClientOriginalExtension();
+            $path = $file->storeAs($dir, $name, 'public');
+            $setting->admin_background_path = $path;
+        }
+
         $setting->save();
         return response()->json([
             'success' => true,
@@ -70,6 +96,9 @@ class SettingsController extends Controller
                 'logo_url' => $setting->logoUrl(),
                 'site_title' => $setting->site_title,
                 'favicon_url' => $setting->faviconUrl(),
+                'payment_notification_title' => $setting->payment_notification_title,
+                'payment_notification_text' => $setting->payment_notification_text,
+                'admin_background_url' => $setting->adminBackgroundUrl(),
             ],
         ]);
     }

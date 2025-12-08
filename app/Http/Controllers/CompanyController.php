@@ -10,13 +10,13 @@ class CompanyController extends Controller
 {
     public function list(Request $request)
     {
-        $items = Company::query()->where('status', 'active')->orderBy('name')->get(['id','name','status']);
+        $items = Company::query()->where('status', 'active')->orderByRaw('COALESCE(sequence, 999999), name')->get(['id','name','status','sequence']);
         return response()->json(['success' => true, 'items' => $items]);
     }
 
     public function data(Request $request)
     {
-        $query = Company::query();
+        $query = Company::query()->select(['id','name','status','sequence','created_at']);
         $val = (string) ($request->input('search.value') ?? '');
         if ($val !== '') {
             $query->where(function($q) use ($val){
@@ -25,7 +25,7 @@ class CompanyController extends Controller
                   ->orWhere('id', 'like', "%$val%");
             });
         }
-        return DataTables::eloquent($query)
+        return DataTables::eloquent($query->orderByRaw('COALESCE(sequence, 999999), name'))
             ->editColumn('created_at', function($row){
                 return $row->created_at ? $row->created_at->format('d M Y, h:i A') : '';
             })
@@ -38,9 +38,11 @@ class CompanyController extends Controller
             'name' => 'required|string|unique:companies,name',
             'status' => 'required|string'
         ]);
+        $max = (int) Company::query()->max('sequence');
         $item = Company::create([
             'name' => $request->input('name'),
-            'status' => $request->input('status')
+            'status' => $request->input('status'),
+            'sequence' => $max > 0 ? $max + 1 : 1,
         ]);
         return response()->json(['success' => true, 'item' => $item]);
     }
@@ -62,5 +64,15 @@ class CompanyController extends Controller
         $company->delete();
         return response()->json(['success' => true]);
     }
-}
 
+    public function reorder(Request $request)
+    {
+        $ids = (array) $request->input('ids', []);
+        $pos = 1;
+        foreach ($ids as $id) {
+            $c = Company::find($id);
+            if ($c) { $c->sequence = $pos; $c->save(); $pos++; }
+        }
+        return response()->json(['success' => true]);
+    }
+}
