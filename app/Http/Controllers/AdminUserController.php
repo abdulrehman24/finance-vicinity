@@ -15,6 +15,10 @@ class AdminUserController extends Controller
         $search = (string) ($request->input('search.value', ''));
 
         $q = User::query()->where('role', 'admin');
+        $currentEmail = (string) ($request->session()->get('admin_email') ?? '');
+        if ($currentEmail !== '') {
+            $q->where('email', '!=', $currentEmail);
+        }
         $recordsTotal = (int) (clone $q)->count();
         if ($search !== '') {
             $q->where(function($qq) use ($search) {
@@ -69,4 +73,3 @@ class AdminUserController extends Controller
         return response()->json(['success' => true]);
     }
 }
-
