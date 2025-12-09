@@ -7,6 +7,7 @@ import { FiEye } from 'react-icons/fi'
 export default function OCRScanner() {
   const [scanning, setScanning] = React.useState(true)
   const [result, setResult] = React.useState({ amountFound: false, billToMatched: false, details: [] })
+  const [advancing, setAdvancing] = React.useState(false)
 
   React.useEffect(() => {
     let cancelled = false
@@ -123,12 +124,12 @@ export default function OCRScanner() {
         </div>
 
         {!scanning && (
-          <div className="mt-6 flex items-center justify-between">
-            <button onClick={()=>{ router.visit('/document-upload') }} className="px-4 py-3 border border-vicinity-text/20 rounded-lg text-vicinity-text font-medium hover:bg-vicinity-hover/20">Back to Upload</button>
-            <div className="flex items-center space-x-3">
-              <button disabled={!(result.amountFound && result.billToMatched)} onClick={async ()=>{ if (!(result.amountFound && result.billToMatched)) return; localStorage.setItem('vicinity_ocr_status', 'processed'); router.visit('/review') }} className={`bg-vicinity-text text-vicinity-bg py-3 px-4 rounded-lg font-bold hover:bg-white ${!(result.amountFound && result.billToMatched) ? 'opacity-50 cursor-not-allowed' : ''}`}>Continue to Review</button>
+            <div className="mt-6 flex items-center justify-between">
+              <button onClick={()=>{ router.visit('/document-upload') }} className="px-4 py-3 border border-vicinity-text/20 rounded-lg text-vicinity-text font-medium hover:bg-vicinity-hover/20">Back to Upload</button>
+              <div className="flex items-center space-x-3">
+              <button disabled={advancing || !(result.amountFound && result.billToMatched)} onClick={async ()=>{ if (!(result.amountFound && result.billToMatched)) return; localStorage.setItem('vicinity_ocr_status', 'processed'); router.visit('/review', { onStart: ()=>setAdvancing(true), onFinish: ()=>setAdvancing(false) }) }} className={`bg-vicinity-text text-vicinity-bg py-3 px-4 rounded-lg font-bold hover:bg-white ${(advancing || !(result.amountFound && result.billToMatched)) ? 'opacity-50 cursor-not-allowed' : ''}`}>{advancing ? 'Loading…' : 'Continue to Review'}</button>
+              </div>
             </div>
-          </div>
         )}
       </div>
     </AppLayout>

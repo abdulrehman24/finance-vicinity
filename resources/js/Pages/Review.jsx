@@ -10,9 +10,11 @@ export default function Review() {
   const ocrStatus = typeof window !== 'undefined' ? localStorage.getItem('vicinity_ocr_status') : null
 
   const total = details?.total || 0
+  const [submitting, setSubmitting] = React.useState(false)
 
   async function submitForApproval() {
     if (ocrStatus !== 'processed' && ocrStatus !== 'skipped') return
+    setSubmitting(true)
     const submission = {
       id: Date.now().toString(),
       documentType: details.documentType,
@@ -28,10 +30,8 @@ export default function Review() {
     const existing = JSON.parse(localStorage.getItem('vicinity_submissions') || '[]')
     existing.push(submission)
     localStorage.setItem('vicinity_submissions', JSON.stringify(existing))
-    try {
-      await axios.post('/drafts/submit', { total })
-    } catch(e) {}
-    router.visit('/finance-dashboard')
+    try { await axios.post('/drafts/submit', { total }) } catch(e) {}
+    router.visit('/finance-dashboard', { onFinish: ()=>setSubmitting(false) })
   }
 
   function typeLabel(t) {
@@ -130,7 +130,7 @@ export default function Review() {
 
         <div className="mt-6 flex items-center justify-between">
           <button onClick={()=>router.visit('/ocr')} className="px-4 py-3 border border-vicinity-text/20 rounded-lg text-vicinity-text font-medium hover:bg-vicinity-hover/20">Back</button>
-          <button disabled={ocrStatus !== 'processed' && ocrStatus !== 'skipped'} onClick={submitForApproval} className={`bg-green-600 text-white py-3 px-4 rounded-lg font-medium flex items-center space-x-2 ${ocrStatus !== 'processed' && ocrStatus !== 'skipped' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-500'}`}><FiSend className="w-4 h-4" /><span>Submit for Approval</span></button>
+          <button disabled={submitting || (ocrStatus !== 'processed' && ocrStatus !== 'skipped')} onClick={submitForApproval} className={`bg-green-600 text-white py-3 px-4 rounded-lg font-medium flex items-center space-x-2 ${(submitting || (ocrStatus !== 'processed' && ocrStatus !== 'skipped')) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-500'}`}><FiSend className="w-4 h-4" /><span>{submitting ? 'Submitting…' : 'Submit for Approval'}</span></button>
         </div>
       </div>
     </AppLayout>

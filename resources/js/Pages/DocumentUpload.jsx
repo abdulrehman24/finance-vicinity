@@ -14,6 +14,11 @@ export default function DocumentUpload() {
   const [uploadProgress, setUploadProgress] = React.useState(0)
   const currentType = typeof window !== 'undefined' ? localStorage.getItem('current_document_type') || 'invoice' : 'invoice'
 
+  function shouldRunOCRForType(t) {
+    if (currentType === 'invoice') return t === 'invoice'
+    return true
+  }
+
   function inferTypeFromName(name) {
     const n = name.toLowerCase()
     if (n.includes('quotation') || n.includes('quote') || n.includes('agreement') || n.includes('talent')) return 'quotation'
@@ -31,7 +36,7 @@ export default function DocumentUpload() {
       type: file.type,
       assignedType: inferTypeFromName(file.name),
       preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
-      ocr: true,
+      ocr: shouldRunOCRForType(inferTypeFromName(file.name)),
     }))
     setUploadedFiles(prev => {
       const next = replaceFiles ? newFiles : [...prev, ...newFiles]
@@ -81,7 +86,7 @@ export default function DocumentUpload() {
             type: f.type,
             assignedType: f.assignedType,
             preview: null,
-            ocr: typeof f.ocr === 'boolean' ? f.ocr : true,
+            ocr: currentType === 'invoice' ? (f.assignedType === 'invoice') : (typeof f.ocr === 'boolean' ? f.ocr : true),
           }))
           setUploadedFiles(existing)
         }
@@ -123,6 +128,7 @@ export default function DocumentUpload() {
       case 'invoice':
         return [
           { name: 'Invoice Document', type: 'invoice', required: true },
+          { name: 'Supporting Document (Quotation/Service Agreement/Talent Release/Other)', type: 'supporting', required: true },
         ]
       case 'tr':
         return [
@@ -169,8 +175,7 @@ export default function DocumentUpload() {
 
   function areRequirementsMet() {
     const required = getRequiredDocuments().map(d => d.type)
-    const uploaded = uploadedFiles.map(f => f.assignedType)
-    return required.every(req => uploaded.includes(req))
+    return required.every(req => uploadedFiles.some(f => fulfills(req, f.assignedType)))
   }
 
   function getUploadStatus(docType) {
@@ -180,6 +185,9 @@ export default function DocumentUpload() {
   function fulfills(requiredType, assignedType) {
     if (requiredType === 'quotation') {
       return ['quotation', 'agreement', 'contract', 'po', 'tr'].includes(assignedType)
+    }
+    if (requiredType === 'supporting') {
+      return ['supporting', 'quotation', 'agreement', 'tr', 'other'].includes(assignedType)
     }
     if (requiredType === 'receipt') {
       return ['receipt', 'transportation', 'meals', 'materials', 'equipment', 'other'].includes(assignedType)
@@ -314,7 +322,14 @@ export default function DocumentUpload() {
                                 <select value={fileItem.assignedType} onChange={(e)=>{
                                   const val = e.target.value
                                   setUploadedFiles(prev => {
-                                    const updated = prev.map(f => f.id === fileItem.id ? { ...f, assignedType: val } : f)
+                                    const updated = prev.map(f => {
+                                      if (f.id !== fileItem.id) return f
+                                      const next = { ...f, assignedType: val }
+                                      if (currentType === 'invoice') {
+                                        next.ocr = val === 'invoice'
+                                      }
+                                      return next
+                                    })
                                     persistUploads(updated)
                                     try { axios.post('/drafts/files', { files: updated.map(f => ({ name: f.name, size: f.size, type: f.type, assignedType: f.assignedType, ocr: !!f.ocr })) }) } catch(e){}
                                     return updated
@@ -329,21 +344,6 @@ export default function DocumentUpload() {
                                 <div className="flex items-center space-x-2">
                                   <span className="px-2 py-1 bg-vicinity-text/10 rounded text-xs text-vicinity-text border border-vicinity-text/20">{getDocumentTypeLabel(fileItem.assignedType)}</span>
                                   <button onClick={()=>setEditingFileId(fileItem.id)} className="text-vicinity-text/60 hover:text-vicinity-text p-1"><FiEdit2 className="w-3 h-3" /></button>
-                                  <label className="relative flex items-center space-x-1 text-xs text-vicinity-text/70">
-                                    <input type="checkbox" checked={!!fileItem.ocr} onChange={(e)=>{
-                                      const checked = e.target.checked
-                                      setUploadedFiles(prev => {
-                                        const updated = prev.map(f => f.id === fileItem.id ? { ...f, ocr: checked } : f)
-                                        persistUploads(updated)
-                                        try { axios.post('/drafts/files', { files: updated.map(f => ({ name: f.name, size: f.size, type: f.type, assignedType: f.assignedType, ocr: !!f.ocr })) }) } catch(e){}
-                                        return updated
-                                      })
-                                    }} className="peer appearance-none w-5 h-5 rounded-full border border-[#3d4b56] bg-[#3d4b56] checked:bg-[#3d4b56] checked:border-[#3d4b56] focus:ring-2 focus:ring-vicinity-text/40 transition-colors" />
-                                    <span className="pointer-events-none absolute left-0 top-0 w-5 h-5 flex items-center justify-center opacity-0 peer-checked:opacity-100">
-                                      <FiCheck className="w-4 h-4 text-white" />
-                                    </span>
-                                    <span>Run OCR</span>
-                                  </label>
                                 </div>
                               )}
                             </div>

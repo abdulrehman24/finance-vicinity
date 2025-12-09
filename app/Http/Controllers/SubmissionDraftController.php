@@ -229,30 +229,37 @@ class SubmissionDraftController extends Controller
     private function generateCombinedInvoicePdf(SubmissionDraft $draft): ?string
     {
         $files = is_array($draft->files) ? $draft->files : [];
-        $invoiceFiles = [];
-        $invoicePdfFiles = [];
+        $invoicePdf = [];
+        $otherPdf = [];
+        $invoiceOther = [];
+        $otherOther = [];
         foreach ($files as $f) {
             $path = $f['path'] ?? null;
             if (!$path) { continue; }
             $type = (string) ($f['type'] ?? '');
             $name = (string) ($f['name'] ?? '');
-            
+            $assigned = strtolower((string) ($f['assignedType'] ?? ''));
             $full = Storage::disk('public')->path($path);
             if (!is_file($full)) { continue; }
-            $invoiceFiles[] = $full;
             $isPdf = stripos($type, 'pdf') !== false || preg_match('/\\.pdf$/i', $path) || preg_match('/\\.pdf$/i', $name);
-            if ($isPdf) { $invoicePdfFiles[] = $full; }
+            if ($isPdf) {
+                if ($assigned === 'invoice') { $invoicePdf[] = $full; } else { $otherPdf[] = $full; }
+            } else {
+                if ($assigned === 'invoice') { $invoiceOther[] = $full; } else { $otherOther[] = $full; }
+            }
         }
-        if (count($invoiceFiles) === 0) { return null; }
+        $orderedPdf = array_merge($invoicePdf, $otherPdf);
+        $orderedAll = array_merge($invoicePdf, $otherPdf, $invoiceOther, $otherOther);
+        if (count($orderedAll) === 0) { return null; }
         $dir = 'submissions/'.$draft->id;
         Storage::disk('public')->makeDirectory($dir);
         $targetRel = $dir.'/combined-invoices.pdf';
         $target = Storage::disk('public')->path($targetRel);
         try {
-            if (class_exists('\\setasign\\Fpdi\\Fpdi') && count($invoicePdfFiles) > 0) {
+            if (class_exists('\\setasign\\Fpdi\\Fpdi') && count($orderedPdf) > 0) {
                 $class = '\\setasign\\Fpdi\\Fpdi';
                 $pdf = new $class();
-                foreach ($invoicePdfFiles as $file) {
+                foreach ($orderedPdf as $file) {
                     $pageCount = $pdf->setSourceFile($file);
                     for ($pageNo = 1; $pageNo <= $pageCount; $pageNo++) {
                         $template = $pdf->importPage($pageNo);
@@ -268,7 +275,7 @@ class SubmissionDraftController extends Controller
                 $imagickClass = '\\Imagick';
                 $imagick = new $imagickClass();
                 $imagick->setResolution(150, 150);
-                foreach ($invoiceFiles as $file) {
+                foreach ($orderedAll as $file) {
                     $doc = new $imagickClass();
                     $doc->readImage($file);
                     foreach ($doc as $page) { $imagick->addImage($page); }
@@ -280,9 +287,9 @@ class SubmissionDraftController extends Controller
         } catch (\Throwable $e) {
             // swallow and return null
         }
-        if (count($invoicePdfFiles) >= 1) {
+        if (count($orderedPdf) >= 1) {
             try {
-                @copy($invoicePdfFiles[0], $target);
+                @copy($orderedPdf[0], $target);
                 if (is_file($target)) { return $targetRel; }
             } catch (\Throwable $e) {}
         }
