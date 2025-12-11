@@ -24,6 +24,8 @@ class SettingsController extends Controller
                 'payment_notification_text' => $setting->payment_notification_text,
                 'admin_background_url' => $setting->adminBackgroundUrl(),
                 'adminBackgroundUrl' => $setting->adminBackgroundUrl(),
+                'finance_background_url' => $setting->financeBackgroundUrl(),
+                'financeBackgroundUrl' => $setting->financeBackgroundUrl(),
             ],
         ]);
     }
@@ -38,6 +40,7 @@ class SettingsController extends Controller
             'payment_notification_title' => ['nullable','string','max:255'],
             'payment_notification_text' => ['nullable','string'],
             'admin_background' => ['nullable','image','max:10240'],
+            'finance_background' => ['nullable','image','max:10240'],
         ]);
         $setting = Setting::current();
 
@@ -88,6 +91,15 @@ class SettingsController extends Controller
             $setting->admin_background_path = $path;
         }
 
+        if ($request->hasFile('finance_background')) {
+            $file = $request->file('finance_background');
+            $dir = 'backgrounds';
+            Storage::disk('public')->makeDirectory($dir);
+            $name = 'finance-bg-'.time().'-'.uniqid().'.'.$file->getClientOriginalExtension();
+            $path = $file->storeAs($dir, $name, 'public');
+            $setting->finance_background_path = $path;
+        }
+
         $setting->save();
         return response()->json([
             'success' => true,
@@ -99,6 +111,7 @@ class SettingsController extends Controller
                 'payment_notification_title' => $setting->payment_notification_title,
                 'payment_notification_text' => $setting->payment_notification_text,
                 'admin_background_url' => $setting->adminBackgroundUrl(),
+                'finance_background_url' => $setting->financeBackgroundUrl(),
             ],
         ]);
     }

@@ -26,3 +26,10 @@ button,
 a[role="button"] {
     cursor: pointer;
 }
+input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(86%) sepia(16%) saturate(540%) hue-rotate(310deg) brightness(96%) contrast(88%);
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    filter: invert(86%) sepia(16%) saturate(540%) hue-rotate(310deg) brightness(100%) contrast(90%);
+}

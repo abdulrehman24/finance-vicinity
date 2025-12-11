@@ -15,8 +15,14 @@ export default function AdminSettings() {
   const [paymentText, setPaymentText] = React.useState('')
   const [adminBgPreview, setAdminBgPreview] = React.useState('')
   const [adminBgFile, setAdminBgFile] = React.useState(null)
+  const [financeBgPreview, setFinanceBgPreview] = React.useState('')
+  const [financeBgFile, setFinanceBgFile] = React.useState(null)
   const [message, setMessage] = React.useState('')
   const [loading, setLoading] = React.useState(false)
+  const logoInputRef = React.useRef(null)
+  const faviconInputRef = React.useRef(null)
+  const adminBgInputRef = React.useRef(null)
+  const financeBgInputRef = React.useRef(null)
 
   React.useEffect(()=>{
     const s = props?.settings || {}
@@ -27,6 +33,7 @@ export default function AdminSettings() {
     setPaymentTitle(s.payment_notification_title || 'Payment Notification')
     setPaymentText(s.payment_notification_text || 'You will be notified of payments via email from our bank when funds are transferred to your account.')
     setAdminBgPreview(s.admin_background_url || s.adminBackgroundUrl || '')
+    setFinanceBgPreview(s.finance_background_url || s.financeBackgroundUrl || '')
   }, [props])
 
   function handleLogoChange(e){
@@ -56,6 +63,20 @@ export default function AdminSettings() {
     }
   }
 
+  function handleFinanceBgChange(e){
+    const file = e.target.files && e.target.files[0]
+    setFinanceBgFile(file || null)
+    if (file) {
+      const url = URL.createObjectURL(file)
+      setFinanceBgPreview(url)
+    }
+  }
+
+  function openLogoPicker(){ try { logoInputRef.current && logoInputRef.current.click() } catch(e){} }
+  function openFaviconPicker(){ try { faviconInputRef.current && faviconInputRef.current.click() } catch(e){} }
+  function openAdminBgPicker(){ try { adminBgInputRef.current && adminBgInputRef.current.click() } catch(e){} }
+  function openFinanceBgPicker(){ try { financeBgInputRef.current && financeBgInputRef.current.click() } catch(e){} }
+
   async function handleSubmit(e){
     e.preventDefault()
     setLoading(true)
@@ -68,6 +89,7 @@ export default function AdminSettings() {
     if (logoFile) fd.append('logo', logoFile)
     if (faviconFile) fd.append('favicon', faviconFile)
     if (adminBgFile) fd.append('admin_background', adminBgFile)
+    if (financeBgFile) fd.append('finance_background', financeBgFile)
     let resp = { data: { success: false, settings: {} } }
     try {
       resp = await axios.post('/admin/settings', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
@@ -84,8 +106,9 @@ export default function AdminSettings() {
       setPaymentTitle(s.payment_notification_title || 'Payment Notification')
       setPaymentText(s.payment_notification_text || 'You will be notified of payments via email from our bank when funds are transferred to your account.')
       setAdminBgPreview(s.admin_background_url || '')
+      setFinanceBgPreview(s.finance_background_url || '')
       try {
-        window.Inertia.page.props.settings = { finance_email: s.finance_email, logoUrl: s.logo_url, site_title: s.site_title, faviconUrl: s.favicon_url, payment_notification_title: s.payment_notification_title, payment_notification_text: s.payment_notification_text, admin_background_url: s.admin_background_url }
+        window.Inertia.page.props.settings = { finance_email: s.finance_email, logoUrl: s.logo_url, site_title: s.site_title, faviconUrl: s.favicon_url, payment_notification_title: s.payment_notification_title, payment_notification_text: s.payment_notification_text, admin_background_url: s.admin_background_url, finance_background_url: s.finance_background_url }
       } catch(e) {}
     }
     if (ok) {
@@ -117,8 +140,23 @@ export default function AdminSettings() {
                 {adminBgPreview ? (<img src={adminBgPreview} alt="Background Preview" className="h-full w-full object-cover" />) : (<div className="h-full w-full flex items-center justify-center text-xs text-vicinity-text/60">No image</div>)}
               </div>
               <div>
-                <input type="file" accept="image/*" onChange={handleAdminBgChange} className="block" />
+                <button type="button" onClick={openAdminBgPicker} className="bg-vicinity-text text-vicinity-bg px-3 py-2 rounded-lg mb-2">Click here to upload</button>
+                <input ref={adminBgInputRef} type="file" accept="image/*" onChange={handleAdminBgChange} className="block" />
                 <p className="text-xs text-vicinity-text/60 mt-2">Large image recommended; will be used as page background on /admin.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-vicinity-card rounded-xl p-6 border border-vicinity-text/10">
+            <label className="block text-sm font-medium mb-2">Finance Login Background</label>
+            <div className="flex items-start space-x-4">
+              <div className="h-20 w-36 border border-vicinity-text/10 rounded bg-vicinity-input overflow-hidden">
+                {financeBgPreview ? (<img src={financeBgPreview} alt="Background Preview" className="h-full w-full object-cover" />) : (<div className="h-full w-full flex items-center justify-center text-xs text-vicinity-text/60">No image</div>)}
+              </div>
+              <div>
+                <button type="button" onClick={openFinanceBgPicker} className="bg-vicinity-text text-vicinity-bg px-3 py-2 rounded-lg mb-2">Click here to upload</button>
+                <input ref={financeBgInputRef} type="file" accept="image/*" onChange={handleFinanceBgChange} className="block" />
+                <p className="text-xs text-vicinity-text/60 mt-2">Used as page background on /.</p>
               </div>
             </div>
           </div>
@@ -140,7 +178,8 @@ export default function AdminSettings() {
             <div className="flex items-start space-x-4">
               <img src={logoPreview || '/logo.webp'} alt="Logo Preview" className="h-16 w-auto object-contain border border-vicinity-text/10 rounded" />
               <div>
-                <input type="file" accept="image/*" onChange={handleLogoChange} className="block" />
+                <button type="button" onClick={openLogoPicker} className="bg-vicinity-text text-vicinity-bg px-3 py-2 rounded-lg mb-2">Click here to upload</button>
+                <input ref={logoInputRef} type="file" accept="image/*" onChange={handleLogoChange} className="block" />
                 <p className="text-xs text-vicinity-text/60 mt-2">Recommended: PNG/WebP, height ~ 24–48px.</p>
               </div>
             </div>
@@ -151,7 +190,8 @@ export default function AdminSettings() {
             <div className="flex items-start space-x-4">
               <img src={faviconPreview || '/favicon.ico'} alt="Favicon Preview" className="h-10 w-10 object-contain border border-vicinity-text/10 rounded" />
               <div>
-                <input type="file" accept="image/png,image/x-icon,image/svg+xml" onChange={handleFaviconChange} className="block" />
+                <button type="button" onClick={openFaviconPicker} className="bg-vicinity-text text-vicinity-bg px-3 py-2 rounded-lg mb-2">Click here to upload</button>
+                <input ref={faviconInputRef} type="file" accept="image/png,image/x-icon,image/svg+xml" onChange={handleFaviconChange} className="block" />
                 <p className="text-xs text-vicinity-text/60 mt-2">PNG/ICO/SVG supported. Suggested size 32×32.</p>
               </div>
             </div>
