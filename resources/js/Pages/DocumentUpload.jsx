@@ -128,7 +128,6 @@ export default function DocumentUpload() {
       case 'invoice':
         return [
           { name: 'Invoice Document', type: 'invoice', required: true },
-          { name: 'Supporting Document (Quotation/Service Agreement/Talent Release/Other)', type: 'supporting', required: true },
         ]
       case 'tr':
         return [
