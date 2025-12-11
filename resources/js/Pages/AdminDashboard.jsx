@@ -33,9 +33,6 @@ export default function AdminDashboard() {
             <h1 className="text-3xl font-bold">Dashboard</h1>
             <p className="text-vicinity-text/70 mt-2">Overview of the submission pipeline</p>
           </div>
-          <div className="hidden md:block">
-            <div className="w-40 h-24 bg-vicinity-text/10 rounded-xl" />
-          </div>
         </div>
         <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
