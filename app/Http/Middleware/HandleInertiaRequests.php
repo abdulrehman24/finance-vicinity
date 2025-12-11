@@ -53,6 +53,8 @@ class HandleInertiaRequests extends Middleware
                 'payment_notification_text' => $settings->payment_notification_text,
                 'adminBackgroundUrl' => $settings->adminBackgroundUrl(),
                 'admin_background_url' => $settings->adminBackgroundUrl(),
+                'financeBackgroundUrl' => $settings->financeBackgroundUrl(),
+                'finance_background_url' => $settings->financeBackgroundUrl(),
             ],
         ];
     }
