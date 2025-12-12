@@ -42,6 +42,10 @@ class HandleInertiaRequests extends Middleware
                 'email' => $request->session()->get('user_email'),
                 'verified' => (bool) $request->session()->get('verified'),
             ],
+            'admin' => [
+                'email' => $request->session()->get('admin_email'),
+                'verified' => (bool) $request->session()->get('admin_verified'),
+            ],
             'settings' => [
                 'finance_email' => $settings->finance_email,
                 'logoUrl' => $settings->logoUrl(),

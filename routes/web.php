@@ -23,6 +23,11 @@ Route::get('/admin', function (Request $request) {
     return Inertia::render('AdminLogin');
 });
 
+Route::middleware('admin')->group(function () {
+    Route::post('/admin/system-reset/send-otp', [\App\Http\Controllers\AdminSystemController::class, 'sendOtp']);
+    Route::post('/admin/system-reset/confirm', [\App\Http\Controllers\AdminSystemController::class, 'confirm']);
+});
+
 Route::middleware('verified')->group(function () {
     Route::get('/finance-dashboard', function () {
         return Inertia::render('Dashboard');
