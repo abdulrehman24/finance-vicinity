@@ -10,7 +10,7 @@ use App\Mail\AdminResetOtpMail;
 
 class AdminSystemController extends Controller
 {
-    protected array $allowed = ['admin@vicinity.com', 'ar5555789@gmail.com', 'abdul@mylive-tech.com'];
+    protected array $allowed = ['admin@vicinity.com','finance@vicinity.com'];
 
     public function sendOtp(Request $request)
     {

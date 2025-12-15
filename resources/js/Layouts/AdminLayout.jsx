@@ -17,7 +17,7 @@ export default function AdminLayout({ children }) {
   const linkCls = (p) => `block px-3 py-2 rounded-lg border ${path.startsWith(p) ? 'bg-vicinity-text text-vicinity-bg border-vicinity-text' : 'bg-vicinity-text/10 border-vicinity-text/20'}`
   const adminEmail = props?.admin?.email || ''
   const adminVerified = !!props?.admin?.verified
-  const allowed = adminVerified && (adminEmail === 'admin@vicinity.com')
+  const allowed = adminVerified && (adminEmail === 'admin@vicinity.com' || adminEmail === 'finance@vicinity.com')
   async function sendResetOtp(){
     if (!allowed) return
     setResetLoading(true)

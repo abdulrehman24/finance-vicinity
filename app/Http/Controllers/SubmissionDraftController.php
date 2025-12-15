@@ -79,7 +79,7 @@ class SubmissionDraftController extends Controller
             $request->validate(['files.*' => 'file|mimes:pdf,png,jpg,jpeg,gif,webp|max:51200']);
             $assigned = (array) $request->input('assignedTypes', []);
             $ocrFlags = (array) $request->input('ocr', []);
-            $replace = (bool) $request->boolean('replace');
+            $replace = (bool) true;
             $dir = 'submissions/'.$draft->id;
             if ($replace) {
                 $existing = is_array($draft->files) ? $draft->files : [];

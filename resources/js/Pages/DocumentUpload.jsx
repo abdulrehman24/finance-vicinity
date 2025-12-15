@@ -9,7 +9,7 @@ export default function DocumentUpload() {
   const [uploadedFiles, setUploadedFiles] = React.useState([])
   const [selectedDocType, setSelectedDocType] = React.useState('')
   const [editingFileId, setEditingFileId] = React.useState(null)
-  const [replaceFiles, setReplaceFiles] = React.useState(true)
+  const [replaceFiles, setReplaceFiles] = React.useState(false)
   const [uploading, setUploading] = React.useState(false)
   const [uploadProgress, setUploadProgress] = React.useState(0)
   const currentType = typeof window !== 'undefined' ? localStorage.getItem('current_document_type') || 'invoice' : 'invoice'
