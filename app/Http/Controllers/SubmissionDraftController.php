@@ -131,7 +131,7 @@ class SubmissionDraftController extends Controller
                 $present[(($m['name'] ?? '')).'|'.(string)($m['size'] ?? '')] = $m;
             }
             $updated = [];
-            $replaceMeta = false;
+            $replaceMeta = true;
             foreach ($existing as $ex) {
                 $key = (($ex['name'] ?? '')).'|'.(string)($ex['size'] ?? '');
                 if (isset($present[$key])) {
