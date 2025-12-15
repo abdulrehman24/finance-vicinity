@@ -79,7 +79,7 @@ class SubmissionDraftController extends Controller
             $request->validate(['files.*' => 'file|mimes:pdf,png,jpg,jpeg,gif,webp|max:51200']);
             $assigned = (array) $request->input('assignedTypes', []);
             $ocrFlags = (array) $request->input('ocr', []);
-            $replace = (bool) true;
+            $replace = false;
             $dir = 'submissions/'.$draft->id;
             if ($replace) {
                 $existing = is_array($draft->files) ? $draft->files : [];
@@ -131,6 +131,7 @@ class SubmissionDraftController extends Controller
                 $present[(($m['name'] ?? '')).'|'.(string)($m['size'] ?? '')] = $m;
             }
             $updated = [];
+            $replaceMeta = false;
             foreach ($existing as $ex) {
                 $key = (($ex['name'] ?? '')).'|'.(string)($ex['size'] ?? '');
                 if (isset($present[$key])) {
@@ -141,8 +142,12 @@ class SubmissionDraftController extends Controller
                     if (array_key_exists('ocr', $m)) { $ex['ocr'] = $this->parseOcrFlag($m['ocr']); }
                     $updated[] = $ex;
                 } else {
-                    $p = $ex['path'] ?? null;
-                    if ($p) { \Illuminate\Support\Facades\Storage::disk('public')->delete($p); }
+                    if ($replaceMeta) {
+                        $p = $ex['path'] ?? null;
+                        if ($p) { \Illuminate\Support\Facades\Storage::disk('public')->delete($p); }
+                        continue;
+                    }
+                    $updated[] = $ex;
                 }
             }
             $draft->files = array_values($updated);
